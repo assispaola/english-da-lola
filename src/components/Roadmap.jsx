@@ -1,8 +1,12 @@
-import { useState } from 'react'
-import { ChevronRight, StickyNote } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { StickyNote } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { ROADMAP_INITIAL } from '../data/roadmapData'
 import { recordActivity } from '../utils/activity'
+import { useAutoSave } from '../hooks/useAutoSave'
+import SaveStatus from './SaveStatus'
+import { PAGE_COLORS, getCardColorSet } from '../utils/colors'
+import RichTextEditor from './RichTextEditor'
 
 const TABS = ['Gramática', 'Vocabulário', 'Leitura', 'Fala']
 
@@ -19,6 +23,47 @@ const STATUS_STYLES = {
   'Em progresso': { bg: '#DBEAFE', color: '#2563EB', border: '#BFDBFE' },
   'Concluído':    { bg: '#D1FAE5', color: '#059669', border: '#A7F3D0' },
   'Revisar':      { bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
+}
+
+function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, onUpdateNote, pc }) {
+  const [localNote, setLocalNote] = useState(item.notes || '')
+  const { save: autoSave, status: saveStatus } = useAutoSave(onUpdateNote)
+
+  return (
+    <div className="card p-4" style={{ borderColor: st.border }}>
+      <div className="flex items-center gap-3">
+        <button onClick={onCycle}
+          className="pill flex-shrink-0 cursor-pointer border transition-colors"
+          style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
+          {item.status}
+        </button>
+        <span className="font-body text-sm flex-1 leading-snug" style={{ color: '#1A1A2E' }}>{item.title}</span>
+        <button onClick={onToggleNote} className="btn-icon flex-shrink-0" title="anotações pessoais">
+          <StickyNote size={16} />
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-3 pl-2 border-l-2" style={{ borderColor: pc.border }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-body" style={{ color: '#9CA3AF' }}>anotações pessoais</span>
+            <SaveStatus status={saveStatus} />
+          </div>
+          <RichTextEditor
+            value={localNote}
+            onChange={val => { setLocalNote(val); autoSave(val) }}
+            placeholder="suas anotações pessoais…"
+            rows={3}
+            accentColor={pc.accent}
+            borderColor={pc.border}
+            primaryColor={pc.primary}
+          />
+          <div className="flex justify-end mt-1">
+            <button onClick={() => autoSave(localNote)} className="btn-primary text-xs py-1.5 px-3">Salvar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Roadmap() {
@@ -54,8 +99,9 @@ export default function Roadmap() {
     recordActivity()
   }
 
-  const updateNote = (tab, itemId, note) =>
-    setRoadmap({ ...roadmap, [tab]: roadmap[tab].map(i => i.id === itemId ? { ...i, notes: note } : i) })
+  const updateNote = useCallback((tab, itemId, note) => {
+    setRoadmap(prev => ({ ...prev, [tab]: prev[tab].map(i => i.id === itemId ? { ...i, notes: note } : i) }))
+  }, [setRoadmap])
 
   const tabProgress = TABS.reduce((acc, tab) => {
     const items = roadmap[tab] || []
@@ -93,19 +139,29 @@ export default function Roadmap() {
     return groups
   })()
 
+  const pc = PAGE_COLORS.roadmap
+
   return (
     <div className="max-w-3xl">
       {/* Tab buttons */}
       <div className="flex gap-2 mb-5 flex-wrap">
         {TABS.map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className="px-4 py-2 rounded-full font-body text-sm font-bold transition-all flex items-center gap-2"
-            style={activeTab === tab
-              ? { background:'linear-gradient(135deg,#E91E8C,#C2185B)', color:'white', boxShadow:'0 2px 8px rgba(233,30,140,0.30)' }
-              : { backgroundColor:'#FCE4EC', color:'#C2185B' }}>
+            className="px-4 py-2 font-body text-sm font-semibold transition-all flex items-center gap-2"
+            style={{
+              borderRadius: '8px',
+              background: activeTab === tab ? `linear-gradient(135deg, rgb(255, 159, 28) 0%, rgb(255, 107, 53) 100%)` : 'transparent',
+              color: activeTab === tab ? 'white' : pc.primary,
+              border: activeTab === tab ? 'none' : `2px solid #f8bbd0`,
+              boxShadow: activeTab === tab ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
+            }}>
             {tab}
-            <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
-              style={activeTab === tab ? { backgroundColor:'rgba(255,255,255,0.25)', color:'white' } : { backgroundColor:'white', color:'#E91E8C' }}>
+            <span className="text-xs px-1.5 py-0.5 font-bold"
+              style={{
+                borderRadius: '6px',
+                backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.25)' : pc.accent,
+                color: activeTab === tab ? 'white' : pc.primary,
+              }}>
               {tabProgress[tab].pct}%
             </span>
           </button>
@@ -113,13 +169,18 @@ export default function Roadmap() {
       </div>
 
       {/* Tab progress */}
-      <div className="card-flat p-4 mb-4">
+      <div className="card-flat p-4 mb-4" style={{ borderColor: pc.border }}>
         <div className="flex justify-between text-sm mb-2">
-          <span className="font-heading lowercase" style={{ color:'#C2185B', fontWeight:500 }}>{TAB_EN[activeTab] || activeTab}</span>
+          <span className="font-heading lowercase" style={{ color: pc.primary, fontWeight: 500 }}>{TAB_EN[activeTab] || activeTab}</span>
           <span className="font-body" style={{ color:'#9CA3AF' }}>{tabProgress[activeTab].done} / {tabProgress[activeTab].total} tópicos</span>
         </div>
-        <div className="progress-track">
-          <div className="progress-fill" style={{ width:`${tabProgress[activeTab].pct}%` }} />
+        <div className="overflow-hidden" style={{ height: '10px', borderRadius: '50px', backgroundColor: pc.accent }}>
+          <div style={{
+            height: '100%', borderRadius: '50px',
+            width: `${tabProgress[activeTab].pct}%`,
+            background: `linear-gradient(to right, ${pc.primary}, ${pc.secondary})`,
+            transition: 'width 0.6s ease',
+          }} />
         </div>
       </div>
 
@@ -131,11 +192,12 @@ export default function Roadmap() {
             {group.name && (
               <div className={`flex items-center gap-3 ${gi === 0 ? 'mb-3' : 'mt-6 mb-3'}`}>
                 <span className="font-heading text-xs font-bold uppercase tracking-widest flex-shrink-0 lowercase"
-                  style={{ color: '#E91E8C', fontWeight: 700, letterSpacing: '0.08em' }}>
+                  style={{ color: pc.primary, fontWeight: 700, letterSpacing: '0.08em' }}>
                   {group.name}
                 </span>
-                <div className="flex-1 h-px" style={{ backgroundColor: '#F8BBD0' }} />
-                <span className="text-xs font-body flex-shrink-0" style={{ color: '#D1D5DB' }}>
+                <div className="flex-1 h-px" style={{ backgroundColor: pc.border }} />
+                <span className="text-xs font-body flex-shrink-0 px-2 py-0.5"
+                  style={{ backgroundColor: pc.accent, color: pc.primary, borderRadius: '6px' }}>
                   {group.items.filter(i => i.status === 'Concluído').length}/{group.items.length}
                 </span>
               </div>
@@ -146,29 +208,17 @@ export default function Roadmap() {
               {group.items.map(item => {
                 const st = STATUS_STYLES[item.status] || STATUS_STYLES['Não visto']
                 return (
-                  <div key={item.id} className="card p-4">
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => cycleStatus(activeTab, item.id)}
-                        className="pill flex-shrink-0 cursor-pointer border transition-colors"
-                        style={{ backgroundColor: st.bg, color: st.color, borderColor: st.border }}>
-                        {item.status}
-                      </button>
-                      <span className="font-body text-sm flex-1 leading-snug" style={{ color:'#1A1A2E' }}>{item.title}</span>
-                      <button onClick={() => setExpandedNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                        className="btn-icon flex-shrink-0" title="anotações pessoais">
-                        <StickyNote size={16} />
-                      </button>
-                    </div>
-                    {expandedNotes[item.id] && (
-                      <div className="mt-3 pl-2 border-l-2" style={{ borderColor:'#F8BBD0' }}>
-                        <textarea value={item.notes || ''} onChange={e => updateNote(activeTab, item.id, e.target.value)}
-                          placeholder="suas anotações pessoais…"
-                          className="w-full text-sm font-body resize-none rounded-xl p-3 focus:outline-none"
-                          style={{ backgroundColor:'#FFF0F6', border:'1.5px solid #F8BBD0', color:'#1A1A2E', minHeight:'44px' }}
-                          rows={3} />
-                      </div>
-                    )}
-                  </div>
+                  <RoadmapItem
+                    key={item.id}
+                    item={item}
+                    st={st}
+                    activeTab={activeTab}
+                    expanded={expandedNotes[item.id]}
+                    onCycle={() => cycleStatus(activeTab, item.id)}
+                    onToggleNote={() => setExpandedNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                    onUpdateNote={(note) => updateNote(activeTab, item.id, note)}
+                    pc={pc}
+                  />
                 )
               })}
             </div>
@@ -178,20 +228,20 @@ export default function Roadmap() {
 
       {/* Monthly timeline */}
       <div className="card p-5 md:p-6">
-        <h3 className="font-heading text-lg mb-4 lowercase" style={{ color:'#C2185B', fontWeight:500 }}>monthly timeline</h3>
+        <h3 className="font-heading text-lg mb-4 lowercase" style={{ color: pc.primary, fontWeight: 500 }}>monthly timeline</h3>
         <div className="flex gap-3 items-end" style={{ height: '80px' }}>
           {monthlyData.map((month, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <span className="text-xs font-body" style={{ color:'#9CA3AF' }}>{month.count > 0 ? month.count : ''}</span>
-              <div className="w-full relative rounded-lg" style={{ height:'60px', backgroundColor:'#F8BBD0' }}>
+              <span className="text-xs font-body" style={{ color: '#9CA3AF' }}>{month.count > 0 ? month.count : ''}</span>
+              <div className="w-full relative rounded-lg" style={{ height: '60px', backgroundColor: pc.accent }}>
                 <div className="absolute bottom-0 left-0 right-0 rounded-lg transition-all duration-500"
-                  style={{ height:`${(month.count / maxCount) * 100}%`, background:'linear-gradient(to top,#C2185B,#F48FB1)' }} />
+                  style={{ height: `${(month.count / maxCount) * 100}%`, background: `linear-gradient(to top, ${pc.secondary}, ${pc.primary})` }} />
               </div>
-              <span className="text-xs font-body text-center leading-tight" style={{ color:'#9CA3AF' }}>{month.name}</span>
+              <span className="text-xs font-body text-center leading-tight" style={{ color: '#9CA3AF' }}>{month.name}</span>
             </div>
           ))}
         </div>
-        <p className="text-xs font-body text-center mt-3" style={{ color:'#9CA3AF' }}>tópicos concluídos por mês</p>
+        <p className="text-xs font-body text-center mt-3" style={{ color: '#9CA3AF' }}>tópicos concluídos por mês</p>
       </div>
     </div>
   )

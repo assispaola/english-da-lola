@@ -74,41 +74,45 @@ h1, h2, h3, h4, h5 {
 
   /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm text-white cursor-pointer transition-all;
-    background: linear-gradient(135deg, #E91E8C, #C2185B);
-    border-radius: 50px;
-    padding: 10px 22px;
+    @apply inline-flex items-center justify-center gap-2 font-body font-semibold text-sm text-white cursor-pointer transition-all;
+    background-color: #E91E8C;
+    border-radius: 8px;
+    padding: 10px 20px;
     min-height: 44px;
     border: none;
-    box-shadow: 0 2px 8px rgba(233, 30, 140, 0.30);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
-  .btn-primary:hover   { opacity: 0.90; transform: translateY(-1px); }
-  .btn-primary:active  { transform: translateY(0); }
+  .btn-primary:hover   { background-color: #C2185B; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .btn-primary:active  { transform: scale(0.99); }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm cursor-pointer transition-all bg-white;
+    @apply inline-flex items-center justify-center gap-2 font-body font-semibold text-sm cursor-pointer transition-all;
+    background-color: transparent;
     color: #E91E8C;
     border: 2px solid #E91E8C;
-    border-radius: 50px;
-    padding: 10px 22px;
+    border-radius: 8px;
+    padding: 10px 20px;
     min-height: 44px;
   }
-  .btn-secondary:hover  { background-color: #FCE4EC; }
-  .btn-secondary:active { transform: scale(0.98); }
+  .btn-secondary:hover  { background-color: #FFF0F6; transform: scale(1.02); }
+  .btn-secondary:active { transform: scale(0.99); }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm cursor-pointer transition-all bg-white;
-    color: #FF6B35;
-    border: 2px solid #FF8A65;
-    border-radius: 50px;
-    padding: 10px 22px;
+    @apply inline-flex items-center justify-center gap-2 font-body font-semibold text-sm cursor-pointer transition-all;
+    background-color: #FF6B35;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
     min-height: 44px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
-  .btn-danger:hover { background-color: #FFF3E0; }
+  .btn-danger:hover { background-color: #FF5722; transform: scale(1.02); }
 
   .btn-icon {
-    @apply inline-flex items-center justify-center p-2 rounded-full cursor-pointer transition-all;
+    @apply inline-flex items-center justify-center p-2 cursor-pointer transition-all;
+    border-radius: 8px;
     min-width: 36px; min-height: 36px;
     color: #9CA3AF;
   }
@@ -118,19 +122,41 @@ h1, h2, h3, h4, h5 {
   /* Cards */
   .card {
     @apply bg-white;
-    border: 1.5px solid #F8BBD0;
+    border: 2px solid #F8BBD0;
     border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(233, 30, 140, 0.08);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
   .card:hover {
-    transform: scale(1.01);
-    box-shadow: 0 4px 20px rgba(233, 30, 140, 0.16);
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   }
   .card-flat {
     @apply bg-white;
-    border: 1.5px solid #F8BBD0;
+    border: 2px solid #F8BBD0;
     border-radius: 16px;
+  }
+
+  /* Page header — curved bottom */
+  .page-header-curved {
+    position: relative;
+    overflow: hidden;
+    padding: 32px 24px 52px;
+    border-radius: 0 0 32px 32px;
+    color: white;
+  }
+  .page-header-curved h1 {
+    font-family: 'Recoleta', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    text-transform: lowercase;
+  }
+  .page-header-curved p {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.80);
+    margin-top: 4px;
   }
 
   /* Inputs */
@@ -184,4 +210,25 @@ h1, h2, h3, h4, h5 {
 @media print {
   body { background: white; }
   .no-print { display: none !important; }
+}
+
+
+/* ─── Rich Text Editor (Tiptap) ──────────────────────── */
+.rich-editor-body p { margin: 0 0 0.5em; }
+.rich-editor-body p:last-child { margin-bottom: 0; }
+.rich-editor-body h2 { font-size: 1.1em; font-weight: 700; margin: 0.75em 0 0.3em; }
+.rich-editor-body h3 { font-size: 1em; font-weight: 700; margin: 0.5em 0 0.25em; }
+.rich-editor-body strong { font-weight: 700; }
+.rich-editor-body em { font-style: italic; }
+.rich-editor-body s { text-decoration: line-through; }
+.rich-editor-body ul { list-style: disc; padding-left: 1.4em; margin: 0.3em 0; }
+.rich-editor-body ol { list-style: decimal; padding-left: 1.4em; margin: 0.3em 0; }
+.rich-editor-body li { margin: 0.15em 0; }
+.rich-editor-body hr { border: none; border-top: 1.5px solid #E5E7EB; margin: 0.75em 0; }
+.rich-editor-body .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9CA3AF;
+  pointer-events: none;
+  height: 0;
 }

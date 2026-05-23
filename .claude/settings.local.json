@@ -8,7 +8,11 @@
       "Bash(node -e \"const p = require\\('./node_modules/lucide-react/package.json'\\); console.log\\('version:', p.version\\); console.log\\('exports:', Object.keys\\(p.exports||{}\\).slice\\(0,5\\)\\)\")",
       "Bash(node -e ' *)",
       "Read(//c/Users/pa_as/Downloads/**)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npx vite *)",
+      "Bash(start /b npx vite --port 5173)"
     ]
   }
 }
