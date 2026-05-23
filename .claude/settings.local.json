@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \"const p = require\\('./node_modules/lucide-react/package.json'\\); console.log\\('version:', p.version\\); console.log\\('exports:', Object.keys\\(p.exports||{}\\).slice\\(0,5\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Read(//c/Users/pa_as/Downloads/**)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

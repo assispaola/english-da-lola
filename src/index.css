@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Recoleta font ─────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ Light.otf') format('opentype');
+  font-weight: 300; font-style: normal;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ LightItalic.otf') format('opentype');
+  font-weight: 300; font-style: italic;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ Regular.otf') format('opentype');
+  font-weight: 400; font-style: normal;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ RegularItalic.otf') format('opentype');
+  font-weight: 400; font-style: italic;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ Medium.otf') format('opentype');
+  font-weight: 500; font-style: normal;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ MediumItalic.otf') format('opentype');
+  font-weight: 500; font-style: italic;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ Bold.otf') format('opentype');
+  font-weight: 700; font-style: normal;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ BoldItalic.otf') format('opentype');
+  font-weight: 700; font-style: italic;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ Black.otf') format('opentype');
+  font-weight: 900; font-style: normal;
+}
+@font-face {
+  font-family: 'Recoleta';
+  src: url('../fonts/Recoleta/Recoleta\ BlackItalic.otf') format('opentype');
+  font-weight: 900; font-style: italic;
+}
+/* ─── Base ────────────────────────────────────────────── */
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: #FFF0F6;
+  color: #1A1A2E;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Recoleta', 'Fredoka One', serif;
+  font-weight: 700;
+}
+
+.font-heading { font-family: 'Recoleta', 'Fredoka One', serif !important; }
+.font-body    { font-family: 'Nunito', sans-serif !important; }
+
+/* ─── Component classes ───────────────────────────────── */
+@layer components {
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm text-white cursor-pointer transition-all;
+    background: linear-gradient(135deg, #E91E8C, #C2185B);
+    border-radius: 50px;
+    padding: 10px 22px;
+    min-height: 44px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(233, 30, 140, 0.30);
+  }
+  .btn-primary:hover   { opacity: 0.90; transform: translateY(-1px); }
+  .btn-primary:active  { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm cursor-pointer transition-all bg-white;
+    color: #E91E8C;
+    border: 2px solid #E91E8C;
+    border-radius: 50px;
+    padding: 10px 22px;
+    min-height: 44px;
+  }
+  .btn-secondary:hover  { background-color: #FCE4EC; }
+  .btn-secondary:active { transform: scale(0.98); }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 font-body font-bold text-sm cursor-pointer transition-all bg-white;
+    color: #FF6B35;
+    border: 2px solid #FF8A65;
+    border-radius: 50px;
+    padding: 10px 22px;
+    min-height: 44px;
+  }
+  .btn-danger:hover { background-color: #FFF3E0; }
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center p-2 rounded-full cursor-pointer transition-all;
+    min-width: 36px; min-height: 36px;
+    color: #9CA3AF;
+  }
+  .btn-icon:hover { background-color: #FCE4EC; color: #E91E8C; }
+  .btn-icon.danger:hover { background-color: #FEE2E2; color: #EF4444; }
+
+  /* Cards */
+  .card {
+    @apply bg-white;
+    border: 1.5px solid #F8BBD0;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(233, 30, 140, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover {
+    transform: scale(1.01);
+    box-shadow: 0 4px 20px rgba(233, 30, 140, 0.16);
+  }
+  .card-flat {
+    @apply bg-white;
+    border: 1.5px solid #F8BBD0;
+    border-radius: 16px;
+  }
+
+  /* Inputs */
+  .input-field {
+    @apply w-full bg-white font-body text-sm;
+    border: 2px solid #F8BBD0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 44px;
+    color: #1A1A2E;
+    transition: border-color 0.15s;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #E91E8C;
+    box-shadow: 0 0 0 3px rgba(233, 30, 140, 0.10);
+  }
+  .input-field::placeholder { color: #9CA3AF; }
+
+  /* Pills / badges */
+  .pill {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-body font-semibold;
+  }
+
+  /* Progress bar */
+  .progress-track {
+    @apply overflow-hidden;
+    height: 12px;
+    border-radius: 50px;
+    background-color: #F8BBD0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(to right, #E91E8C, #C2185B);
+    transition: width 0.6s ease;
+  }
+}
+
+/* ─── Mobile bottom nav spacing ──────────────────────── */
+@media (max-width: 767px) {
+  .main-content { padding-bottom: 80px; }
+}
+
+/* ─── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: #FFF0F6; }
+::-webkit-scrollbar-thumb { background: #F9A8D4; border-radius: 3px; }
+
+/* ─── Print stylesheet ─────────────────────────────────── */
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+}
