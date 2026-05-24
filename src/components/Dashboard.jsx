@@ -110,9 +110,9 @@ export default function Dashboard({ setActivePage }) {
           <div key={i} className="card p-4 text-center">
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2"
               style={{ backgroundColor: s.pc.accent }}>
-              <s.Icon size={20} style={{ color: s.pc.primary }} />
+              <s.Icon size={20} style={{ color: '#e91e63' }} />
             </div>
-            <div className="font-heading text-3xl" style={{ color: '#FD3766', fontWeight: 700 }}>{s.value}</div>
+            <div className="font-heading text-3xl" style={{ color: '#673ab7', fontWeight: 500 }}>{s.value}</div>
             <p className="font-body text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{s.label}</p>
           </div>
         ))}

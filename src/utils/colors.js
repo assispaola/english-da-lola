@@ -6,7 +6,7 @@ export const COLOR_SETS = {
   b3: { primary: '#D8608C', secondary: '#D8608C', accent: '#FDF2F8', text: '#DF8CBA', border: '#DF8CBA' },
   c1: { primary: '#8B0000', secondary: '#DC143C', accent: '#FEE2E2', text: '#7F1D1D', border: '#FCA5A5' },
   c2: { primary: '#663399', secondary: '#5C2E7E', accent: '#F3E8FF', text: '#4C1D95', border: '#C4B5FD' },
-  d1: { primary: '#CF1164', secondary: '#FF904D', accent: '#FFDFCB', text: '#D8608C', border: '#D8608C' },
+  d1: { primary: '#CF1164', secondary: '#FF904D', accent: '#e5defe', text: '#673ab7', border: '#C4B5FD' },
 }
 
 export const COLOR_ORDER = ['a1', 'a2', 'b1', 'b2', 'b3','c1', 'c2', 'd1']
