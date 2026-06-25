@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Flame, Layers, CheckCircle, Download } from 'lucide-react'
+import { useRef } from 'react'
+import { Flame, Layers, CheckCircle, Download, Upload } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { getStreak } from '../utils/activity'
 import { ROADMAP_INITIAL } from '../data/roadmapData'
-import { exportBackup } from '../utils/backup'
+import { exportBackup, importBackup } from '../utils/backup'
 import { PAGE_COLORS } from '../utils/colors'
 import ExportReport from './ExportReport'
 import WavyBackground from './WavyBackground'
@@ -22,6 +23,7 @@ function ProgressBar({ value, color }) {
 }
 
 export default function Dashboard({ setActivePage }) {
+  const fileInputRef = useRef(null)
   const [nextClass, setNextClass] = useLocalStorage('ej_next_class', { date: '', topic: '', type: 'VIP' })
   const [streak,          setStreak]         = useState(0)
   const [roadmapProgress, setRoadmapProgress] = useState(0)
@@ -81,6 +83,30 @@ export default function Dashboard({ setActivePage }) {
               className="inline-flex items-center gap-2 font-body font-semibold text-sm px-4 py-2 transition-all"
               style={{ backgroundColor: 'rgba(255,255,255,0.20)', color: 'white', borderRadius: '8px', border: '1.5px solid rgba(255,255,255,0.35)', minHeight: '40px' }}>
               <Download size={14} /> backup
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                try {
+                  await importBackup(file)
+                  alert('Backup restaurado com sucesso! A página vai recarregar.')
+                  window.location.reload()
+                } catch {
+                  alert('Erro ao restaurar o backup. Verifique se o arquivo é válido.')
+                }
+                e.target.value = ''
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 font-body font-semibold text-sm px-4 py-2 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.20)', color: 'white', borderRadius: '8px', border: '1.5px solid rgba(255,255,255,0.35)', minHeight: '40px' }}>
+              <Upload size={14} /> restaurar
             </button>
           </div>
         </div>

@@ -56,6 +56,27 @@ export function exportBackup() {
   } catch (err) { console.error('Export backup failed:', err) }
 }
 
+export function importBackup(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result)
+        DATA_KEYS.forEach(key => {
+          if (data[key] !== undefined) {
+            localStorage.setItem(key, JSON.stringify(data[key]))
+          }
+        })
+        resolve(true)
+      } catch (err) {
+        reject(err)
+      }
+    }
+    reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
+    reader.readAsText(file)
+  })
+}
+
 export function initBackupSchedule() {
   createBackup() // immediate snapshot on load
   const id = setInterval(createBackup, 30 * 60 * 1000)
