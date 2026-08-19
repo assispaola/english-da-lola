@@ -25,4 +25,26 @@ export const PAGE_COLORS = {
   vip:        COLOR_SETS.b3,
   frase:      COLOR_SETS.a1,
   metas:      COLOR_SETS.a2,
+  praticar:   COLOR_SETS.b1,
+  anotacoes:  COLOR_SETS.a2,
+  conquistas: COLOR_SETS.a1,
+}
+
+// Pastel/saturated pairs for tag chips, picked deterministically from the tag text
+// so the same tag always renders with the same color across the app.
+const TAG_PALETTE = [
+  { bg: '#FCE4EC', color: '#C2185B' },
+  { bg: '#FFF3E0', color: '#FF6B35' },
+  { bg: '#E0F7FA', color: '#26C6A0' },
+  { bg: '#EDE7F6', color: '#7C3AED' },
+  { bg: '#D1FAE5', color: '#059669' },
+  { bg: '#FEF3C7', color: '#D97706' },
+  { bg: '#DBEAFE', color: '#2563EB' },
+  { bg: '#FFE4E6', color: '#E11D48' },
+]
+
+export function getTagColor(tag) {
+  let hash = 0
+  for (let i = 0; i < tag.length; i++) hash = (hash * 31 + tag.charCodeAt(i)) >>> 0
+  return TAG_PALETTE[hash % TAG_PALETTE.length]
 }

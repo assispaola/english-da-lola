@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Search } from 'lucide-react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { getGlossarioWordsByLevel, addGlossarioWord, updateGlossarioWord, deleteGlossarioWord } from '../utils/glossario'
+import { useLevel } from '../utils/levels'
 import { getCardColorSet } from '../utils/colors'
 
 const CATEGORIES = ['substantivo', 'verbo', 'adjetivo', 'advérbio', 'expressão', 'phrasal verb', 'outro']
@@ -19,7 +20,11 @@ const CAT_COLORS = {
 const EMPTY = { word: '', pronunciation: '', example: '', category: 'substantivo', unit: '1A' }
 
 export default function Glossario() {
-  const [words,      setWords]      = useLocalStorage('ej_glossario', [])
+  const { currentLevel } = useLevel()
+  const [tick, setTick] = useState(0)
+  const refresh = () => setTick(t => t + 1)
+  const words = useMemo(() => getGlossarioWordsByLevel(currentLevel), [tick, currentLevel])
+
   const [showForm,   setShowForm]   = useState(false)
   const [form,       setForm]       = useState(EMPTY)
   const [editId,     setEditId]     = useState(null)
@@ -30,10 +35,11 @@ export default function Glossario() {
   const saveWord = () => {
     if (!form.word.trim()) return
     if (editId) {
-      setWords(words.map(w => w.id === editId ? { ...w, ...form } : w))
+      updateGlossarioWord(editId, form)
     } else {
-      setWords([{ ...form, id: Date.now(), createdAt: new Date().toISOString().split('T')[0] }, ...words])
+      addGlossarioWord({ ...form, level: currentLevel })
     }
+    refresh()
     setForm(EMPTY); setEditId(null); setShowForm(false)
   }
 
@@ -42,7 +48,9 @@ export default function Glossario() {
     setEditId(word.id); setShowForm(true)
   }
 
-  const deleteWord = (id) => { if (window.confirm('Excluir esta palavra?')) setWords(words.filter(w => w.id !== id)) }
+  const deleteWord = (id) => {
+    if (window.confirm('Excluir esta palavra?')) { deleteGlossarioWord(id); refresh() }
+  }
 
   const filtered = words.filter(w => {
     const q = search.toLowerCase()
@@ -135,7 +143,9 @@ export default function Glossario() {
       {filtered.length === 0 ? (
         <div className="text-center py-14">
           <div className="text-6xl mb-4">📚</div>
-          <p className="font-heading text-xl lowercase" style={{ color: '#D1D5DB', fontWeight: 500 }}>no words found 📚</p>
+          <p className="font-heading text-xl lowercase" style={{ color: '#D1D5DB', fontWeight: 500 }}>
+            {words.length === 0 ? `você ainda não tem palavras em ${currentLevel}` : 'no words found 📚'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

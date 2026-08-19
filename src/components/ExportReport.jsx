@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
-import { ROADMAP_INITIAL } from '../data/roadmapData'
+import { getRoadmapForLevel } from '../data/roadmapData'
+import { useLevel, DEFAULT_LEVEL } from '../utils/levels'
 
 function getStreak(dates) {
   if (!dates.length) return 0
@@ -23,14 +24,21 @@ function printHTML(html) {
 }
 
 export default function ExportReport() {
+  const { currentLevel } = useLevel()
   const [loading, setLoading] = useState(false)
 
   const generate = () => {
     setLoading(true)
     try {
-      const roadmap    = JSON.parse(localStorage.getItem('ej_roadmap') || 'null') || ROADMAP_INITIAL
-      const flashcards = JSON.parse(localStorage.getItem('ej_flashcards') || '[]')
-      const glossario  = JSON.parse(localStorage.getItem('ej_glossario') || '[]')
+      const legacyRoadmapKey = currentLevel === DEFAULT_LEVEL ? 'ej_roadmap' : null
+      const roadmapDefault = getRoadmapForLevel(currentLevel)
+      const roadmap = JSON.parse(localStorage.getItem(`ej_roadmap__${currentLevel}`)
+        || (legacyRoadmapKey && localStorage.getItem(legacyRoadmapKey))
+        || 'null') || roadmapDefault
+      const flashcards = (JSON.parse(localStorage.getItem('ej_flashcards') || '[]'))
+        .filter(c => (c.level || DEFAULT_LEVEL) === currentLevel)
+      const glossario = (JSON.parse(localStorage.getItem('ej_glossario') || '[]'))
+        .filter(w => (w.level || DEFAULT_LEVEL) === currentLevel)
       const metas      = JSON.parse(localStorage.getItem('ej_metas') || '{"goals":[]}')
       const erros      = JSON.parse(localStorage.getItem('ej_erros') || '[]')
       const actDates   = JSON.parse(localStorage.getItem('ej_activity_dates') || '[]')
@@ -112,7 +120,7 @@ export default function ExportReport() {
 </style>
 </head>
 <body>
-  <h1>english journey — a1 🌸</h1>
+  <h1>english journey — ${currentLevel.toLowerCase()} 🌸</h1>
   <p class="subtitle">Relatório gerado em ${today}</p>
 
   <h2>📊 Progresso Geral</h2>

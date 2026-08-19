@@ -1,3 +1,5 @@
+import { DEFAULT_LEVEL } from '../utils/levels'
+
 const item = (id, title, group = null) => ({
   id, title, group, status: 'Não visto', notes: '', completedAt: null,
 })
@@ -151,4 +153,27 @@ export const ROADMAP_INITIAL = {
     item('f29', 'Fazer planos (Be going to)',                                      'everyday situations'),
     item('f30', 'Falar ao telefone de forma básica',                              'everyday situations'),
   ],
+}
+
+// Roadmap content keyed by CEFR level. Only A1 exists today — adding a new
+// level is just adding a new `LEVEL: {...}` block here (and to exerciseBank.js),
+// no code changes needed anywhere else.
+export const ROADMAP_BY_LEVEL = {
+  A1: ROADMAP_INITIAL,
+}
+
+export function getRoadmapForLevel(level) {
+  return ROADMAP_BY_LEVEL[level] || {}
+}
+
+// Finds a roadmap item by its id within a given level's categories
+// (Gramática, Vocabulário...), returning it with its category attached.
+// Used to resolve exercise topicId -> topic info.
+export function findRoadmapTopic(id, level = DEFAULT_LEVEL) {
+  const roadmap = getRoadmapForLevel(level)
+  for (const [category, items] of Object.entries(roadmap)) {
+    const found = items.find(i => i.id === id)
+    if (found) return { ...found, category, level }
+  }
+  return null
 }

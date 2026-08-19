@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Play } from 'lucide-react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useState, useMemo } from 'react'
+import { Plus, Pencil, Trash2, Play, Volume2, ArrowLeftRight, Trophy, Check, X } from 'lucide-react'
+import { getFlashcardsByLevel, addFlashcard, updateFlashcard, deleteFlashcard } from '../utils/flashcards'
+import { useLevel } from '../utils/levels'
 import { recordActivity } from '../utils/activity'
 import { getCardColorSet } from '../utils/colors'
+import { speakEnglish, isSpeechSupported } from '../utils/speech'
+import { normalize } from '../utils/exerciseEngine'
 
 const CATEGORIES = ['gramática', 'vocabulário', 'expressões', 'phrasal verbs']
+const MASTERY_STREAK = 3
 
 const CAT_COLORS = {
   'gramática':     { bg: '#FCE4EC', color: '#C2185B' },
@@ -20,8 +24,22 @@ function Badge({ cat }) {
   return <span className="pill" style={{ backgroundColor: c.bg, color: c.color }}>{cat}</span>
 }
 
+function SpeakButton({ text, size = 14, ...rest }) {
+  if (!isSpeechSupported()) return null
+  return (
+    <button onClick={(e) => { e.stopPropagation(); speakEnglish(text) }} className="btn-icon" title="ouvir pronúncia" {...rest}>
+      <Volume2 size={size} />
+    </button>
+  )
+}
+
 export default function Flashcards() {
-  const [cards,  setCards]  = useLocalStorage('ej_flashcards', [])
+  const { currentLevel } = useLevel()
+  const [tick, setTick] = useState(0)
+  const refresh = () => setTick(t => t + 1)
+
+  const cards = useMemo(() => getFlashcardsByLevel(currentLevel), [tick, currentLevel])
+
   const [mode,   setMode]   = useState('list')
   const [form,   setForm]   = useState(EMPTY)
   const [editId, setEditId] = useState(null)
@@ -31,16 +49,22 @@ export default function Flashcards() {
   const [revealed, setRevealed] = useState(false)
   const [stats,    setStats]    = useState({ sei: 0, mais_ou_menos: 0, nao_sei: 0 })
 
+  // Reverse quiz (PT → EN typed answer) state
+  const [reverseInput,    setReverseInput]    = useState('')
+  const [reverseFeedback, setReverseFeedback] = useState(null) // { correct, justMastered } | null
+  const [reverseStats,    setReverseStats]    = useState({ correct: 0, wrong: 0, newlyMastered: 0 })
+
   const today    = new Date().toISOString().split('T')[0]
   const filtered = filter === 'todas' ? cards : cards.filter(c => c.category === filter)
 
   const saveCard = () => {
     if (!form.front.trim() || !form.back.trim()) return
     if (editId) {
-      setCards(cards.map(c => c.id === editId ? { ...c, ...form } : c))
+      updateFlashcard(editId, form)
     } else {
-      setCards([...cards, { ...form, id: Date.now(), reviewCount: 0, lastReview: null, confidence: null, createdAt: today }])
+      addFlashcard({ ...form, level: currentLevel })
     }
+    refresh()
     setForm(EMPTY); setEditId(null); setMode('list')
   }
 
@@ -50,7 +74,7 @@ export default function Flashcards() {
   }
 
   const deleteCard = (id) => {
-    if (window.confirm('Excluir este flashcard?')) setCards(cards.filter(c => c.id !== id))
+    if (window.confirm('Excluir este flashcard?')) { deleteFlashcard(id); refresh() }
   }
 
   const startReview = () => {
@@ -63,13 +87,51 @@ export default function Flashcards() {
 
   const rate = (confidence) => {
     const card = reviewCards[idx]
-    setCards(cards.map(c => c.id === card.id ? { ...c, reviewCount: c.reviewCount + 1, lastReview: today, confidence } : c))
+    updateFlashcard(card.id, { reviewCount: card.reviewCount + 1, lastReview: today, confidence })
+    refresh()
     setStats(prev => ({ ...prev, [confidence]: prev[confidence] + 1 }))
     if (idx + 1 < reviewCards.length) { setIdx(idx + 1); setRevealed(false) }
     else setMode('done')
   }
 
-  /* ── Review done ── */
+  const startReverseQuiz = () => {
+    if (!filtered.length) return
+    setReviewCards([...filtered].sort(() => Math.random() - 0.5))
+    setIdx(0); setReverseInput(''); setReverseFeedback(null)
+    setReverseStats({ correct: 0, wrong: 0, newlyMastered: 0 })
+    setMode('reverseQuiz'); recordActivity()
+  }
+
+  const submitReverseAnswer = () => {
+    if (reverseFeedback || !reverseInput.trim()) return
+    const card = reviewCards[idx]
+    const correct = normalize(reverseInput) === normalize(card.front)
+    const newStreak = correct ? (card.masteredStreak || 0) + 1 : 0
+    const justMastered = correct && newStreak >= MASTERY_STREAK && !card.mastered
+    const patch = {
+      masteredStreak: newStreak, mastered: card.mastered || newStreak >= MASTERY_STREAK,
+      reviewCount: card.reviewCount + 1, lastReview: today,
+    }
+    const updated = updateFlashcard(card.id, patch)
+    refresh()
+    setReviewCards(rc => rc.map(c => c.id === card.id ? updated : c))
+    setReverseStats(prev => ({
+      correct: prev.correct + (correct ? 1 : 0),
+      wrong: prev.wrong + (correct ? 0 : 1),
+      newlyMastered: prev.newlyMastered + (justMastered ? 1 : 0),
+    }))
+    setReverseFeedback({ correct, justMastered })
+  }
+
+  const nextReverse = () => {
+    if (idx + 1 < reviewCards.length) {
+      setIdx(idx + 1); setReverseInput(''); setReverseFeedback(null)
+    } else {
+      setMode('reverseDone')
+    }
+  }
+
+  /* ── Review done (classic) ── */
   if (mode === 'done') {
     return (
       <div className="max-w-md mx-auto text-center">
@@ -95,7 +157,103 @@ export default function Flashcards() {
     )
   }
 
-  /* ── Review mode ── */
+  /* ── Reverse quiz done ── */
+  if (mode === 'reverseDone') {
+    return (
+      <div className="max-w-md mx-auto text-center">
+        <div className="card p-8">
+          <div className="text-6xl mb-4">🔁</div>
+          <h2 className="font-heading text-2xl mb-2 lowercase" style={{ color: '#7C3AED', fontWeight: 700 }}>quiz reverso concluído!</h2>
+          <p className="font-body mb-6" style={{ color: '#9CA3AF' }}>{reviewCards.length} cards testados</p>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="rounded-xl p-3" style={{ backgroundColor: '#D1FAE5' }}>
+              <div className="font-heading text-2xl" style={{ color: '#059669' }}>{reverseStats.correct}</div>
+              <div className="text-xs font-body mt-0.5" style={{ color: '#059669' }}>✅ certas</div>
+            </div>
+            <div className="rounded-xl p-3" style={{ backgroundColor: '#FEE2E2' }}>
+              <div className="font-heading text-2xl" style={{ color: '#DC2626' }}>{reverseStats.wrong}</div>
+              <div className="text-xs font-body mt-0.5" style={{ color: '#DC2626' }}>❌ erradas</div>
+            </div>
+          </div>
+          {reverseStats.newlyMastered > 0 && (
+            <p className="font-body text-sm mb-6 font-semibold" style={{ color: '#D97706' }}>
+              🏆 {reverseStats.newlyMastered} novo{reverseStats.newlyMastered > 1 ? 's' : ''} card{reverseStats.newlyMastered > 1 ? 's' : ''} dominado{reverseStats.newlyMastered > 1 ? 's' : ''}!
+            </p>
+          )}
+          <button onClick={() => setMode('list')} className="btn-primary w-full justify-center">voltar para lista</button>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Reverse quiz mode (PT → EN) ── */
+  if (mode === 'reverseQuiz') {
+    const card = reviewCards[idx]
+    const cs   = getCardColorSet(idx)
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="flex justify-between items-center mb-3">
+          <button onClick={() => setMode('list')} className="btn-secondary text-sm py-2 px-4">← voltar</button>
+          <span className="font-body text-sm" style={{ color: '#9CA3AF' }}>{idx + 1} / {reviewCards.length}</span>
+        </div>
+        <div className="progress-track mb-6">
+          <div className="progress-fill" style={{ width: `${(idx / reviewCards.length) * 100}%`, background: `linear-gradient(to right, #7C3AED, #5B21B6)` }} />
+        </div>
+
+        <div className="card p-8 text-center" style={{ border: `2px solid ${cs.border}` }}>
+          <Badge cat={card.category} />
+
+          <p className="text-xs font-body uppercase tracking-wide mt-6 mb-2" style={{ color: '#9CA3AF' }}>português</p>
+          <p className="font-heading text-3xl mb-2" style={{ color: cs.primary, fontWeight: 700 }}>{card.back}</p>
+          {(card.mastered || card.masteredStreak > 0) && (
+            <p className="text-xs font-body font-semibold" style={{ color: '#D97706' }}>
+              {card.mastered ? '🏆 dominado' : `sequência: ${card.masteredStreak}/${MASTERY_STREAK}`}
+            </p>
+          )}
+
+          <p className="text-xs font-body uppercase tracking-wide mt-6 mb-2" style={{ color: '#9CA3AF' }}>como se diz em inglês?</p>
+          <input type="text" value={reverseInput} disabled={!!reverseFeedback}
+            onChange={e => setReverseInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submitReverseAnswer() }}
+            placeholder="digite em inglês…" className="input-field text-center font-body text-lg" autoFocus />
+
+          {reverseFeedback && (
+            <div className="mt-4 p-4 flex items-start gap-3 text-left" style={{
+              borderRadius: '12px',
+              backgroundColor: reverseFeedback.correct ? '#D1FAE5' : '#FEE2E2',
+              border: `2px solid ${reverseFeedback.correct ? '#A7F3D0' : '#FECACA'}`,
+            }}>
+              <div className="flex-shrink-0 mt-0.5" style={{ color: reverseFeedback.correct ? '#059669' : '#DC2626' }}>
+                {reverseFeedback.correct ? <Check size={18} /> : <X size={18} />}
+              </div>
+              <div className="flex-1">
+                <p className="font-heading text-sm lowercase" style={{ color: reverseFeedback.correct ? '#059669' : '#DC2626', fontWeight: 700 }}>
+                  {reverseFeedback.correct ? 'certo!' : 'errado'}
+                </p>
+                <p className="font-body text-sm mt-0.5" style={{ color: reverseFeedback.correct ? '#065F46' : '#991B1B' }}>{card.front}</p>
+                {reverseFeedback.justMastered && (
+                  <p className="font-body text-xs mt-1 font-semibold" style={{ color: '#D97706' }}>🏆 card dominado!</p>
+                )}
+              </div>
+              <SpeakButton text={card.front} size={16} className="btn-icon flex-shrink-0" />
+            </div>
+          )}
+
+          <div className="mt-6">
+            {!reverseFeedback ? (
+              <button onClick={submitReverseAnswer} disabled={!reverseInput.trim()} className="btn-primary w-full justify-center">responder</button>
+            ) : (
+              <button onClick={nextReverse} className="btn-primary w-full justify-center">
+                {idx + 1 < reviewCards.length ? 'próximo' : 'ver resumo'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Review mode (classic EN → PT) ── */
   if (mode === 'review') {
     const card = reviewCards[idx]
     const cs   = getCardColorSet(idx)
@@ -109,16 +267,19 @@ export default function Flashcards() {
           <div style={{ height: '100%', borderRadius: '50px', width: `${(idx / reviewCards.length) * 100}%`, backgroundColor: cs.primary, transition: 'width 0.4s ease' }} />
         </div>
 
-        <div className="card p-8 text-center cursor-pointer"
-          style={{ border: `2px solid ${cs.border}` }}
-          onClick={() => !revealed && setRevealed(true)}>
+        <div className="card p-8 text-center"
+          style={{ border: `2px solid ${cs.border}` }}>
           <Badge cat={card.category} />
-          <div className="mt-6 mb-4">
+          <div className="mt-6 mb-4 cursor-pointer" onClick={() => !revealed && setRevealed(true)}>
             <p className="text-xs font-body uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>inglês</p>
-            <p className="font-heading text-3xl" style={{ color: cs.primary, fontWeight: 700 }}>{card.front}</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="font-heading text-3xl" style={{ color: cs.primary, fontWeight: 700 }}>{card.front}</p>
+              <SpeakButton text={card.front} size={18} />
+            </div>
           </div>
           {!revealed ? (
-            <div className="mt-8 p-4 rounded-xl border-2 border-dashed" style={{ borderColor: cs.border, backgroundColor: cs.accent }}>
+            <div className="mt-8 p-4 rounded-xl border-2 border-dashed cursor-pointer" onClick={() => setRevealed(true)}
+              style={{ borderColor: cs.border, backgroundColor: cs.accent }}>
               <p className="font-body text-sm" style={{ color: cs.secondary }}>toque para revelar ✨</p>
             </div>
           ) : (
@@ -197,13 +358,20 @@ export default function Flashcards() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {filtered.length > 0 && (
-            <button onClick={startReview}
-              className="inline-flex items-center gap-2 font-body font-semibold text-sm text-white px-4 py-2 transition-all hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg,#26C6A0,#00897B)', minHeight: '44px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
-              <Play size={14} /> revisar ({filtered.length})
-            </button>
+            <>
+              <button onClick={startReview}
+                className="inline-flex items-center gap-2 font-body font-semibold text-sm text-white px-4 py-2 transition-all hover:scale-[1.02]"
+                style={{ background: 'linear-gradient(135deg,#26C6A0,#00897B)', minHeight: '44px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                <Play size={14} /> revisar ({filtered.length})
+              </button>
+              <button onClick={startReverseQuiz}
+                className="inline-flex items-center gap-2 font-body font-semibold text-sm text-white px-4 py-2 transition-all hover:scale-[1.02]"
+                style={{ background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', minHeight: '44px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                <ArrowLeftRight size={14} /> quiz reverso
+              </button>
+            </>
           )}
           <button onClick={() => { setMode('form'); setForm(EMPTY); setEditId(null) }} className="btn-primary">
             <Plus size={16} /> novo card
@@ -214,7 +382,9 @@ export default function Flashcards() {
       {filtered.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🃏</div>
-          <p className="font-heading text-xl lowercase" style={{ color: '#D1D5DB', fontWeight: 500 }}>no flashcards yet 🃏</p>
+          <p className="font-heading text-xl lowercase" style={{ color: '#D1D5DB', fontWeight: 500 }}>
+            {cards.length === 0 ? `você ainda não tem flashcards em ${currentLevel}` : 'no flashcards yet 🃏'}
+          </p>
           <p className="font-body text-sm mt-2" style={{ color: '#9CA3AF' }}>crie seu primeiro card acima!</p>
         </div>
       ) : (
@@ -225,18 +395,24 @@ export default function Flashcards() {
               <div key={card.id} className="group p-5 transition-all hover:scale-[1.02]"
                 style={{
                   backgroundColor: cs.accent,
-                  border: `2px solid ${cs.border}`,
+                  border: `2px solid ${card.mastered ? '#FBBF24' : cs.border}`,
                   borderRadius: '16px',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.07)',
                 }}>
                 <div className="flex justify-between items-start mb-3">
-                  <Badge cat={card.category} />
+                  <div className="flex items-center gap-1.5">
+                    <Badge cat={card.category} />
+                    {card.mastered && <Trophy size={14} style={{ color: '#D97706' }} title="dominado" />}
+                  </div>
                   <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => startEdit(card)} className="btn-icon"><Pencil size={14} /></button>
                     <button onClick={() => deleteCard(card.id)} className="btn-icon danger"><Trash2 size={14} /></button>
                   </div>
                 </div>
-                <p className="font-heading text-lg" style={{ color: cs.primary, fontWeight: 500 }}>{card.front}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-heading text-lg" style={{ color: cs.primary, fontWeight: 500 }}>{card.front}</p>
+                  <SpeakButton text={card.front} size={13} />
+                </div>
                 <p className="font-body text-sm mt-1" style={{ color: cs.text }}>{card.back}</p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-xs font-body" style={{ color: '#9CA3AF' }}>revisado {card.reviewCount}×</span>
