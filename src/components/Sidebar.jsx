@@ -1,16 +1,23 @@
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Layers, Map, BookOpen,
-  AlertCircle, BookMarked, Star, MessageSquare, Target,
+  AlertCircle, BookMarked, Star, MessageSquare, Target, Dumbbell, NotebookPen, Award, LogOut,
 } from 'lucide-react'
 import { PAGE_COLORS } from '../utils/colors'
+import LevelSelector from './LevelSelector'
+import { onAuthChange, signOutUser } from '../utils/auth'
+import { isFirebaseConfigured } from '../firebase'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'dashboard',        Icon: LayoutDashboard },
   { id: 'flashcards', label: 'flashcards',        Icon: Layers          },
+  { id: 'praticar',   label: 'praticar',          Icon: Dumbbell        },
   { id: 'roadmap',    label: 'roadmap',           Icon: Map             },
   { id: 'diario',     label: 'diário de bordo',   Icon: BookOpen        },
+  { id: 'anotacoes',  label: 'anotações',         Icon: NotebookPen     },
   { id: 'erros',      label: 'banco de erros',    Icon: AlertCircle     },
   { id: 'glossario',  label: 'glossário pessoal', Icon: BookMarked      },
+  { id: 'conquistas', label: 'conquistas',        Icon: Award           },
   { id: 'vip',        label: 'prep vip',          Icon: Star            },
   { id: 'frase',      label: 'frase do dia',      Icon: MessageSquare   },
   { id: 'metas',      label: 'metas semanais',    Icon: Target          },
@@ -18,6 +25,12 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ activePage, setActivePage }) {
   const activeColor = (PAGE_COLORS[activePage] || PAGE_COLORS.dashboard).primary
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return onAuthChange(setUser)
+  }, [])
 
   return (
     <aside className="w-60 h-full flex flex-col overflow-hidden flex-shrink-0"
@@ -29,10 +42,9 @@ export default function Sidebar({ activePage, setActivePage }) {
           style={{ fontWeight: 900, color: activeColor, transition: 'color 0.3s' }}>
           english journey
         </p>
-        <span className="inline-block mt-2 px-2 py-0.5 text-xs font-body font-bold"
-          style={{ backgroundColor: '#F3F4F6', color: '#6B7280', borderRadius: '6px' }}>
-          nível a1
-        </span>
+        <div className="mt-3">
+          <LevelSelector compact activeColor={activeColor} />
+        </div>
       </div>
 
       {/* Nav */}
@@ -77,6 +89,14 @@ export default function Sidebar({ activePage, setActivePage }) {
 
       {/* Footer */}
       <div className="px-5 py-4" style={{ borderTop: '1.5px solid #F3F4F6' }}>
+        {user && (
+          <button onClick={() => signOutUser()}
+            className="w-full flex items-center justify-center gap-1.5 font-body text-xs mb-2 py-1.5 transition-colors"
+            style={{ color: '#9CA3AF', borderRadius: '6px' }}
+            title={user.email || 'sair'}>
+            <LogOut size={12} /> sair
+          </button>
+        )}
         <p className="text-xs text-center font-body italic" style={{ color: activeColor, opacity: 0.7, transition: 'color 0.3s' }}>
           great minds english ♥
         </p>

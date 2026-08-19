@@ -77,8 +77,8 @@ function ChecklistSection({ title, emoji, items, onAdd, onToggle, onDelete, read
 }
 
 export default function PrepVIP() {
-  const [sessions, setSessions] = useLocalStorage('ej_vip_sessions', [])
-  const [current,  setCurrent]  = useLocalStorage('ej_vip_current', { ...EMPTY_SESSION })
+  const [sessions, setSessions] = useLocalStorage('ej_vip_sessions', [], 'vipSessions')
+  const [current,  setCurrent]  = useLocalStorage('ej_vip_current', { ...EMPTY_SESSION }, 'vipCurrent')
   const [view,     setView]     = useState('current')
 
   const updateSection = (sec, items) => setCurrent({ ...current, [sec]: items })

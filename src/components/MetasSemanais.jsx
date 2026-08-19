@@ -25,7 +25,7 @@ export default function MetasSemanais() {
   const [metas, setMetas] = useLocalStorage('ej_metas', {
     weekStart: currentMonday,
     goals: DEFAULT_GOALS,
-  })
+  }, 'metas')
   const [newGoalText, setNewGoalText] = useState('')
 
   useEffect(() => {

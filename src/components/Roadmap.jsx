@@ -1,12 +1,16 @@
-import { useState, useCallback } from 'react'
-import { StickyNote } from 'lucide-react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { StickyNote, Dumbbell, Star } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
-import { ROADMAP_INITIAL } from '../data/roadmapData'
+import { getRoadmapForLevel } from '../data/roadmapData'
+import { useLevel } from '../utils/levels'
 import { recordActivity } from '../utils/activity'
 import { useAutoSave } from '../hooks/useAutoSave'
 import SaveStatus from './SaveStatus'
 import { PAGE_COLORS, getCardColorSet } from '../utils/colors'
-import RichTextEditor from './RichTextEditor'
+import NoteFields from './NoteFields'
+import { getNotesByTopic, addNote, updateNote as updateNoteEntity } from '../utils/notes'
+import { isTopicPracticed } from '../utils/exercises'
+import { pushRoadmap } from '../utils/syncEngine'
 
 const TABS = ['Gramática', 'Vocabulário', 'Leitura', 'Fala']
 
@@ -25,9 +29,37 @@ const STATUS_STYLES = {
   'Revisar':      { bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
 }
 
-function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, onUpdateNote, pc }) {
-  const [localNote, setLocalNote] = useState(item.notes || '')
-  const { save: autoSave, status: saveStatus } = useAutoSave(onUpdateNote)
+function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, pc, practiced, level }) {
+  const [note, setNote] = useState(() => getNotesByTopic(item.id, level)[0] || null)
+  // Mirrors `note` synchronously so `persist` can decide create-vs-update
+  // without putting side effects (addNote/updateNote hit localStorage)
+  // inside a setState updater — React StrictMode double-invokes those on
+  // purpose to catch impurities, which would otherwise create duplicate notes.
+  const noteRef = useRef(note)
+
+  // One-time migration of the legacy plain-text note that used to live on the
+  // roadmap item itself (item.notes), into a proper Note entity.
+  useEffect(() => {
+    if (!note && item.notes && item.notes.trim()) {
+      const migrated = addNote({ topicId: item.id, content: item.notes, tags: [], favorite: false, level })
+      noteRef.current = migrated
+      setNote(migrated)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const [localContent, setLocalContent] = useState(note?.content ?? item.notes ?? '')
+
+  const persist = useCallback((patch) => {
+    const current = noteRef.current
+    const result = current
+      ? updateNoteEntity(current.id, patch)
+      : addNote({ topicId: item.id, content: '', tags: [], favorite: false, level, ...patch })
+    noteRef.current = result
+    setNote(result)
+  }, [item.id, level])
+
+  const { save: autoSaveContent, status: saveStatus } = useAutoSave((content) => persist({ content }))
 
   return (
     <div className="card p-4" style={{ borderColor: st.border }}>
@@ -38,28 +70,28 @@ function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, onUpdateNote, 
           {item.status}
         </button>
         <span className="font-body text-sm flex-1 leading-snug" style={{ color: '#1A1A2E' }}>{item.title}</span>
+        {note?.favorite && <Star size={14} className="flex-shrink-0" fill="#FBBF24" color="#FBBF24" title="anotação favorita" />}
+        {practiced && item.status !== 'Concluído' && (
+          <Dumbbell size={14} className="flex-shrink-0" style={{ color: '#26C6A0' }} title="exercícios concluídos em praticar" />
+        )}
         <button onClick={onToggleNote} className="btn-icon flex-shrink-0" title="anotações pessoais">
           <StickyNote size={16} />
         </button>
       </div>
       {expanded && (
         <div className="mt-3 pl-2 border-l-2" style={{ borderColor: pc.border }}>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-body" style={{ color: '#9CA3AF' }}>anotações pessoais</span>
-            <SaveStatus status={saveStatus} />
-          </div>
-          <RichTextEditor
-            value={localNote}
-            onChange={val => { setLocalNote(val); autoSave(val) }}
+          <div className="flex justify-end mb-1"><SaveStatus status={saveStatus} /></div>
+          <NoteFields
+            content={localContent}
+            onContentChange={val => { setLocalContent(val); autoSaveContent(val) }}
+            tags={note?.tags || []}
+            onTagsChange={tags => persist({ tags })}
+            favorite={note?.favorite || false}
+            onToggleFavorite={() => persist({ favorite: !(note?.favorite) })}
+            pc={pc}
             placeholder="suas anotações pessoais…"
             rows={3}
-            accentColor={pc.accent}
-            borderColor={pc.border}
-            primaryColor={pc.primary}
           />
-          <div className="flex justify-end mt-1">
-            <button onClick={() => autoSave(localNote)} className="btn-primary text-xs py-1.5 px-3">Salvar</button>
-          </div>
         </div>
       )}
     </div>
@@ -68,12 +100,21 @@ function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, onUpdateNote, 
 
 export default function Roadmap() {
   const today = new Date().toISOString().split('T')[0]
+  const { currentLevel, checkUnlocks } = useLevel()
+  const roadmapKey = `ej_roadmap__${currentLevel}`
+  const ROADMAP_INITIAL = getRoadmapForLevel(currentLevel)
 
   // Migration: reset if schema is outdated (old "Escrita" key or item count mismatch)
   const EXPECTED_TOTAL = Object.values(ROADMAP_INITIAL).reduce((s, arr) => s + arr.length, 0)
-  const [roadmap, setRoadmap] = useLocalStorage('ej_roadmap', (() => {
+  const [roadmap, setRoadmap] = useLocalStorage(roadmapKey, (() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('ej_roadmap'))
+      // One-time migration: A1 progress used to live under the un-suffixed
+      // 'ej_roadmap' key, before per-level keys existed.
+      if (currentLevel === 'A1' && !localStorage.getItem(roadmapKey)) {
+        const legacy = localStorage.getItem('ej_roadmap')
+        if (legacy) localStorage.setItem(roadmapKey, legacy)
+      }
+      const saved = JSON.parse(localStorage.getItem(roadmapKey))
       if (!saved) return ROADMAP_INITIAL
       if ('Escrita' in saved) return ROADMAP_INITIAL   // old schema
       const savedTotal = Object.values(saved).reduce((s, arr) => s + arr.length, 0)
@@ -89,26 +130,26 @@ export default function Roadmap() {
     const items = roadmap[tab]
     const item  = items.find(i => i.id === itemId)
     const next  = STATUS_CYCLE[(STATUS_CYCLE.indexOf(item.status) + 1) % STATUS_CYCLE.length]
-    setRoadmap({
+    const updatedRoadmap = {
       ...roadmap,
       [tab]: items.map(i => i.id === itemId ? {
         ...i, status: next,
         completedAt: next === 'Concluído' ? today : (next === 'Não visto' ? null : i.completedAt),
       } : i),
-    })
+    }
+    setRoadmap(updatedRoadmap)
+    pushRoadmap(currentLevel, updatedRoadmap)
     recordActivity()
+    checkUnlocks() // marking something Concluído might complete this level's roadmap
   }
 
-  const updateNote = useCallback((tab, itemId, note) => {
-    setRoadmap(prev => ({ ...prev, [tab]: prev[tab].map(i => i.id === itemId ? { ...i, notes: note } : i) }))
-  }, [setRoadmap])
-
-  const tabProgress = TABS.reduce((acc, tab) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tabProgress = useMemo(() => TABS.reduce((acc, tab) => {
     const items = roadmap[tab] || []
-    const done  = items.filter(i => i.status === 'Concluído').length
+    const done  = items.filter(i => i.status === 'Concluído' || isTopicPracticed(i.id, currentLevel)).length
     acc[tab] = { done, total: items.length, pct: items.length > 0 ? Math.round((done / items.length) * 100) : 0 }
     return acc
-  }, {})
+  }, {}), [roadmap, currentLevel])
 
   const getMonthlyData = () => {
     const allItems = Object.values(roadmap).flat()
@@ -216,8 +257,9 @@ export default function Roadmap() {
                     expanded={expandedNotes[item.id]}
                     onCycle={() => cycleStatus(activeTab, item.id)}
                     onToggleNote={() => setExpandedNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                    onUpdateNote={(note) => updateNote(activeTab, item.id, note)}
                     pc={pc}
+                    practiced={isTopicPracticed(item.id, currentLevel)}
+                    level={currentLevel}
                   />
                 )
               })}
