@@ -1,20 +1,40 @@
 rules_version = '2';
 
 // Every document for this app lives under users/{uid}/... — a user may only
-// read or write their OWN subtree, and only while authenticated. Nothing is
-// ever public. Cole isto no console do Firebase em:
+// read or write their OWN subtree, and only while authenticated AND their
+// authenticated email is present in allowed_users/{email} (lowercased).
+// This is the real access boundary (defense in depth): even if the client
+// app's own login gate were bypassed, an unauthorized email is denied by
+// Firestore itself. Cole isto no console do Firebase em:
 //   Firestore Database → aba "Regras" → substitua o conteúdo → Publicar
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isAllowed() {
+      return request.auth != null && request.auth.token.email != null
+        && exists(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower()));
+    }
+
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null && request.auth.uid == uid && isAllowed();
 
       match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read, write: if request.auth != null && request.auth.uid == uid && isAllowed();
       }
     }
 
-    // Anything outside users/{uid}/... is denied by default (no catch-all
-    // "allow" rule exists for it).
+    // The allowlist itself: doc id is the authorized email, lowercased
+    // (content doesn't matter, only existence). Only editable by hand from
+    // the Firebase console — never from the app, so it can't be tampered
+    // with client-side. A signed-in user may read ONLY their own doc (to
+    // check "am I allowed"), never list or read anyone else's.
+    match /allowed_users/{email} {
+      allow read: if request.auth != null && request.auth.token.email != null
+        && request.auth.token.email.lower() == email;
+      allow write: if false;
+    }
+
+    // Anything outside users/{uid}/... or allowed_users/{email} is denied
+    // by default (no catch-all "allow" rule exists for it).
   }
 }

@@ -33,6 +33,46 @@ let currentUid = null
 export function setSyncUser(uid) { currentUid = uid }
 export function getSyncUser() { return currentUid }
 
+// Wipes every piece of synced/account-scoped local state. MUST run on
+// sign-out, before another account can sign in on the same browser —
+// otherwise the next login's migration step would read this account's
+// leftover localStorage and push it into a DIFFERENT uid's Firestore data,
+// or the new account would briefly render this account's data before its
+// own pull finishes. Static/reseeded keys (ej_topics, ej_exercises) are
+// left alone since they hold no user data and get overwritten on next read.
+export function clearLocalData() {
+  for (const storageKey of Object.values(SYNCED_COLLECTIONS)) localStorage.removeItem(storageKey)
+  for (const storageKey of Object.values(SETTINGS_KEYS)) localStorage.removeItem(storageKey)
+  for (const level of LEVELS) localStorage.removeItem(`ej_roadmap__${level}`)
+  localStorage.removeItem('ej_roadmap')
+  localStorage.removeItem('ej_current_level')
+  localStorage.removeItem('ej_levels_unlocked')
+  localStorage.removeItem(QUEUE_KEY)
+  setSyncStatus('idle')
+}
+
+// ─── Sync status pub/sub — lets the UI show a discreet "salvando…" / "erro
+// ao salvar" indicator instead of failing silently when offline. ─────────
+
+let syncStatus = 'idle' // 'idle' | 'saving' | 'error'
+const statusListeners = new Set()
+let idleTimer = null
+
+function setSyncStatus(status) {
+  syncStatus = status
+  statusListeners.forEach(cb => cb(status))
+  clearTimeout(idleTimer)
+  if (status === 'saved') {
+    idleTimer = setTimeout(() => setSyncStatus('idle'), 2000)
+  }
+}
+
+export function getSyncStatus() { return syncStatus }
+export function onSyncStatusChange(cb) {
+  statusListeners.add(cb)
+  return () => statusListeners.delete(cb)
+}
+
 const QUEUE_KEY = 'ej_sync_queue'
 function readQueue() {
   try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]') } catch { return [] }
@@ -44,6 +84,7 @@ function queueRetry(op) {
   const q = readQueue()
   q.push(op)
   writeQueue(q)
+  setSyncStatus('error')
 }
 
 export async function flushRetryQueue() {
@@ -51,6 +92,8 @@ export async function flushRetryQueue() {
   const queue = readQueue()
   if (!queue.length) return
   writeQueue([])
+  setSyncStatus('saving')
+  let anyFailed = false
   for (const op of queue) {
     try {
       if (op.type === 'setItem') await cloud.setItem(currentUid, op.name, op.item)
@@ -58,9 +101,15 @@ export async function flushRetryQueue() {
       else if (op.type === 'settings') await setDoc(cloud.settingsRef(currentUid, op.settingsKey), { value: op.value })
       else if (op.type === 'roadmap') await setDoc(cloud.roadmapRef(currentUid, op.level), op.roadmap)
     } catch {
+      anyFailed = true
       queueRetry(op) // still offline/failing — keep for the next flush
     }
   }
+  if (!anyFailed) setSyncStatus('saved')
+}
+
+export function retrySyncNow() {
+  return flushRetryQueue()
 }
 
 if (typeof window !== 'undefined') {
@@ -78,26 +127,38 @@ function debounced(timerKey, fn, delay = 800) {
 export function pushCollectionItem(name, item) {
   if (!isFirebaseConfigured || !currentUid) return
   debounced(`${name}:${item.id}`, () => {
-    cloud.setItem(currentUid, name, item).catch(() => queueRetry({ type: 'setItem', name, item }))
+    setSyncStatus('saving')
+    cloud.setItem(currentUid, name, item)
+      .then(() => setSyncStatus('saved'))
+      .catch(() => queueRetry({ type: 'setItem', name, item }))
   })
 }
 
 export function pushCollectionRemove(name, id) {
   if (!isFirebaseConfigured || !currentUid) return
-  cloud.removeItem(currentUid, name, id).catch(() => queueRetry({ type: 'removeItem', name, id }))
+  setSyncStatus('saving')
+  cloud.removeItem(currentUid, name, id)
+    .then(() => setSyncStatus('saved'))
+    .catch(() => queueRetry({ type: 'removeItem', name, id }))
 }
 
 export function pushSettings(settingsKey, value) {
   if (!isFirebaseConfigured || !currentUid) return
   debounced(`settings:${settingsKey}`, () => {
-    setDoc(cloud.settingsRef(currentUid, settingsKey), { value }).catch(() => queueRetry({ type: 'settings', settingsKey, value }))
+    setSyncStatus('saving')
+    setDoc(cloud.settingsRef(currentUid, settingsKey), { value })
+      .then(() => setSyncStatus('saved'))
+      .catch(() => queueRetry({ type: 'settings', settingsKey, value }))
   })
 }
 
 export function pushRoadmap(level, roadmap) {
   if (!isFirebaseConfigured || !currentUid) return
   debounced(`roadmap:${level}`, () => {
-    setDoc(cloud.roadmapRef(currentUid, level), roadmap).catch(() => queueRetry({ type: 'roadmap', level, roadmap }))
+    setSyncStatus('saving')
+    setDoc(cloud.roadmapRef(currentUid, level), roadmap)
+      .then(() => setSyncStatus('saved'))
+      .catch(() => queueRetry({ type: 'roadmap', level, roadmap }))
   })
 }
 

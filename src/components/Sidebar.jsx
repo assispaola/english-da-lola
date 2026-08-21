@@ -7,6 +7,7 @@ import { PAGE_COLORS } from '../utils/colors'
 import LevelSelector from './LevelSelector'
 import { onAuthChange, signOutUser } from '../utils/auth'
 import { isFirebaseConfigured } from '../firebase'
+import { clearLocalData } from '../utils/syncEngine'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'dashboard',        Icon: LayoutDashboard },
@@ -90,7 +91,7 @@ export default function Sidebar({ activePage, setActivePage }) {
       {/* Footer */}
       <div className="px-5 py-4" style={{ borderTop: '1.5px solid #F3F4F6' }}>
         {user && (
-          <button onClick={() => signOutUser()}
+          <button onClick={async () => { await signOutUser(); clearLocalData(); window.location.reload() }}
             className="w-full flex items-center justify-center gap-1.5 font-body text-xs mb-2 py-1.5 transition-colors"
             style={{ color: '#9CA3AF', borderRadius: '6px' }}
             title={user.email || 'sair'}>

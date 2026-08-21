@@ -16,11 +16,13 @@ import MetasSemanais from './components/MetasSemanais'
 import WavyBackground from './components/WavyBackground'
 import QuickNoteModal from './components/QuickNoteModal'
 import Login from './components/Login'
+import CloudSyncStatus from './components/CloudSyncStatus'
 import { PAGE_COLORS } from './utils/colors'
 import { initBackupSchedule } from './utils/backup'
 import { useLevel, LevelProvider } from './utils/levels'
 import { isFirebaseConfigured } from './firebase'
-import { onAuthChange } from './utils/auth'
+import { onAuthChange, signOutUser } from './utils/auth'
+import { isEmailAllowed } from './utils/allowlist'
 import { setSyncUser, migrateLocalToCloudIfNeeded, pullAllFromCloud, flushRetryQueue } from './utils/syncEngine'
 import { LayoutDashboard, Layers, Map, BookMarked, Target } from 'lucide-react'
 
@@ -153,6 +155,7 @@ function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#F8F9FA' }}>
+      {isFirebaseConfigured && <CloudSyncStatus />}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {justUnlocked && <LevelUnlockToast level={justUnlocked} offset={!!toast} onClose={clearJustUnlocked} />}
       {quickNoteOpen && <QuickNoteModal onClose={() => setQuickNoteOpen(false)} />}
@@ -262,12 +265,25 @@ function SplashScreen({ message }) {
 // just falls back to local-only mode, no login required.
 export default function App() {
   const [authState, setAuthState] = useState(isFirebaseConfigured ? 'loading' : 'local')
+  const [loginNotice, setLoginNotice] = useState('')
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     const unsubscribe = onAuthChange(async (user) => {
       if (!user) {
         setSyncUser(null)
+        setAuthState('out')
+        return
+      }
+      // Re-checked on every auth state change, not just at sign-up — so a
+      // persisted session from before an email was removed from the
+      // allowlist (or a pre-existing account that was never on it) gets
+      // kicked out on the next load too, not only on the next login attempt.
+      const allowed = await isEmailAllowed(user.email)
+      if (!allowed) {
+        await signOutUser()
+        setSyncUser(null)
+        setLoginNotice('este app é de uso restrito — acesso não autorizado para este email.')
         setAuthState('out')
         return
       }
@@ -286,7 +302,7 @@ export default function App() {
   }, [])
 
   if (authState === 'loading') return <SplashScreen />
-  if (authState === 'out') return <Login />
+  if (authState === 'out') return <Login initialNotice={loginNotice} />
   if (authState === 'syncing') return <SplashScreen message="sincronizando seus dados…" />
 
   // LevelProvider mounts here (not globally in main.jsx) so its initial read
