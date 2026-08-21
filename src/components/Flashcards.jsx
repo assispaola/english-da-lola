@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Play, Volume2, ArrowLeftRight, Trophy, Check, X } from 'lucide-react'
 import { getFlashcardsByLevel, addFlashcard, updateFlashcard, deleteFlashcard } from '../utils/flashcards'
+import { confirmDialog } from '../utils/confirmDialog'
 import { useLevel } from '../utils/levels'
 import { recordActivity } from '../utils/activity'
 import { getCardColorSet } from '../utils/colors'
@@ -73,8 +74,8 @@ export default function Flashcards() {
     setEditId(card.id); setMode('form')
   }
 
-  const deleteCard = (id) => {
-    if (window.confirm('Excluir este flashcard?')) { deleteFlashcard(id); refresh() }
+  const deleteCard = async (id) => {
+    if (await confirmDialog('Excluir este flashcard?')) { deleteFlashcard(id); refresh() }
   }
 
   const startReview = () => {

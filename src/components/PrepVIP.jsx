@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, X, Check, Trash2 } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { confirmDialog } from '../utils/confirmDialog'
 import { useAutoSave } from '../hooks/useAutoSave'
 import SaveStatus from './SaveStatus'
 import { PAGE_COLORS } from '../utils/colors'
@@ -92,7 +93,7 @@ export default function PrepVIP() {
     setCurrent({ ...EMPTY_SESSION })
   }
 
-  const deleteSession = (id) => { if (window.confirm('Excluir sessão?')) setSessions(sessions.filter(s => s.id !== id)) }
+  const deleteSession = async (id) => { if (await confirmDialog('Excluir sessão?')) setSessions(sessions.filter(s => s.id !== id)) }
 
   // auto-save for topic field
   const { save: saveTopic, status: topicStatus } = useAutoSave((val) => setCurrent(prev => ({ ...prev, topic: val })))

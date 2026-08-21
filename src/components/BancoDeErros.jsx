@@ -8,6 +8,7 @@ import {
 import { seedExercisesFromBank } from '../utils/exercises'
 import { getAllExercisesForLevel } from '../data/exerciseBank'
 import { getRoadmapForLevel, findRoadmapTopic } from '../data/roadmapData'
+import { confirmDialog } from '../utils/confirmDialog'
 import { buildReviewPool, getTopicsNeedingReview } from '../utils/reviewQueue'
 import { useLevel, DEFAULT_LEVEL } from '../utils/levels'
 import { PAGE_COLORS } from '../utils/colors'
@@ -90,8 +91,8 @@ export default function BancoDeErros() {
     refresh()
   }
 
-  const remove = (id) => {
-    if (window.confirm('Excluir este erro permanentemente?')) { deleteErrorLog(id); refresh() }
+  const remove = async (id) => {
+    if (await confirmDialog('Excluir este erro permanentemente?')) { deleteErrorLog(id); refresh() }
   }
 
   const startQuiz = () => { if (reviewPool.length) setQuizExercises(reviewPool) }

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Search, Star, Trash2, Pencil } from 'lucide-react'
 import { getNotes, updateNote, deleteNote, toggleNoteFavorite } from '../utils/notes'
+import { confirmDialog } from '../utils/confirmDialog'
 import { findRoadmapTopic } from '../data/roadmapData'
 import { DEFAULT_LEVEL } from '../utils/levels'
 import { PAGE_COLORS } from '../utils/colors'
@@ -45,7 +46,7 @@ export default function Anotacoes() {
   const cancelEdit = () => { setEditId(null); setEditDraft(null) }
   const saveEdit = () => { updateNote(editId, editDraft); cancelEdit(); refresh() }
 
-  const remove = (id) => { if (window.confirm('Excluir esta anotação?')) { deleteNote(id); refresh() } }
+  const remove = async (id) => { if (await confirmDialog('Excluir esta anotação?')) { deleteNote(id); refresh() } }
   const toggleFav = (id) => { toggleNoteFavorite(id); refresh() }
 
   return (

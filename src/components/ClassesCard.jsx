@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { ChevronDown, ChevronUp, Pencil, Trash2, Plus, X, Check } from 'lucide-react'
 import { COLOR_SETS, PAGE_COLORS } from '../utils/colors'
 import { getUpcomingClasses, getPastClasses, addClass, updateClass, deleteClass, migrateLegacyNextClass } from '../utils/classes'
+import { confirmDialog } from '../utils/confirmDialog'
 
 const TYPE_COLORS = { Grupo: COLOR_SETS.c2, VIP: COLOR_SETS.b3 }
 
@@ -95,7 +96,7 @@ export default function ClassesCard({ onChange }) {
   }
 
   const saveEdit = (id, patch) => { updateClass(id, patch); setEditingId(null); refresh() }
-  const remove   = (id) => { if (window.confirm('Excluir esta aula?')) { deleteClass(id); refresh() } }
+  const remove   = async (id) => { if (await confirmDialog('Excluir esta aula?')) { deleteClass(id); refresh() } }
 
   const du = highlight ? daysUntil(highlight.date) : null
   const hc = highlight ? (TYPE_COLORS[highlight.type] || TYPE_COLORS.VIP) : null

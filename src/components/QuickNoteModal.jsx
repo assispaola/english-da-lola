@@ -23,9 +23,9 @@ export default function QuickNoteModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(26,26,46,0.45)' }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
       onClick={onClose}>
-      <div className="card p-6 w-full max-w-lg" style={{ borderColor: pc.border }} onClick={e => e.stopPropagation()}>
+      <div className="card-flat p-6 w-full max-w-lg" style={{ borderColor: pc.border }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading text-xl lowercase" style={{ color: pc.primary, fontWeight: 500 }}>anotação rápida</h2>
           <button onClick={onClose} className="btn-icon"><X size={16} /></button>

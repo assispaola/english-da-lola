@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Star } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { confirmDialog } from '../utils/confirmDialog'
 import { PAGE_COLORS, getCardColorSet } from '../utils/colors'
 
 const CATEGORIES = ['geral', 'saudações', 'cotidiano', 'trabalho', 'gramática', 'expressão idiomática']
@@ -40,7 +41,7 @@ export default function FraseDoDia() {
 
   const markMastered = (id) => setPhrases(phrases.map(p => p.id === id ? { ...p, mastered: true }  : p))
   const unMastered   = (id) => setPhrases(phrases.map(p => p.id === id ? { ...p, mastered: false } : p))
-  const deletePhrase = (id) => { if (window.confirm('Excluir esta frase?')) setPhrases(phrases.filter(p => p.id !== id)) }
+  const deletePhrase = async (id) => { if (await confirmDialog('Excluir esta frase?')) setPhrases(phrases.filter(p => p.id !== id)) }
   const startEdit    = (phrase) => {
     setForm({ english: phrase.english, portuguese: phrase.portuguese, category: phrase.category })
     setEditId(phrase.id); setShowForm(true)

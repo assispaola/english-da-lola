@@ -56,6 +56,10 @@ function useOutsideClose(groupRef, open, onClose) {
 }
 
 // Small popover with a grid of options, anchored under its toolbar button.
+// Centered under the button (not left-aligned) and width-capped to the
+// viewport — the toolbar wraps to multiple rows on narrow screens, so this
+// button can land anywhere (including near the right edge), and a
+// left-aligned fixed-width popover would otherwise risk spilling off-screen.
 function Picker({ open, border, children }) {
   if (!open) return null
 
@@ -63,7 +67,8 @@ function Picker({ open, border, children }) {
     <div className="absolute z-20 flex flex-wrap gap-1 p-2"
       onMouseDown={e => e.preventDefault()}
       style={{
-        top: 'calc(100% + 4px)', left: 0, width: '168px',
+        top: 'calc(100% + 4px)', left: '50%', transform: 'translateX(-50%)',
+        width: '168px', maxWidth: 'calc(100vw - 32px)',
         backgroundColor: 'white', border: `1.5px solid ${border}`, borderRadius: '10px',
         boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
       }}>

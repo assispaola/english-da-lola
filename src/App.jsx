@@ -17,6 +17,7 @@ import WavyBackground from './components/WavyBackground'
 import QuickNoteModal from './components/QuickNoteModal'
 import Login from './components/Login'
 import CloudSyncStatus from './components/CloudSyncStatus'
+import ConfirmDialogHost from './components/ConfirmDialogHost'
 import { PAGE_COLORS } from './utils/colors'
 import { initBackupSchedule } from './utils/backup'
 import { useLevel, LevelProvider } from './utils/levels'
@@ -163,6 +164,7 @@ function AppShell() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#F8F9FA' }}>
       {isFirebaseConfigured && <CloudSyncStatus />}
+      <ConfirmDialogHost />
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {justUnlocked && <LevelUnlockToast level={justUnlocked} offset={!!toast} onClose={clearJustUnlocked} />}
       {quickNoteOpen && <QuickNoteModal onClose={() => setQuickNoteOpen(false)} />}

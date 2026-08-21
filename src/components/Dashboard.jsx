@@ -7,6 +7,7 @@ import { getRoadmapForLevel } from '../data/roadmapData'
 import { useLevel, DEFAULT_LEVEL } from '../utils/levels'
 import { exportBackup, importBackup } from '../utils/backup'
 import { getUpcomingClasses } from '../utils/classes'
+import { alertDialog } from '../utils/confirmDialog'
 import { PAGE_COLORS } from '../utils/colors'
 import ExportReport from './ExportReport'
 import WavyBackground from './WavyBackground'
@@ -185,10 +186,10 @@ export default function Dashboard({ setActivePage }) {
                 if (!file) return
                 try {
                   await importBackup(file)
-                  alert('Backup restaurado com sucesso! A página vai recarregar.')
+                  await alertDialog('Backup restaurado com sucesso! A página vai recarregar.', { variant: 'success' })
                   window.location.reload()
                 } catch {
-                  alert('Erro ao restaurar o backup. Verifique se o arquivo é válido.')
+                  await alertDialog('Erro ao restaurar o backup. Verifique se o arquivo é válido.', { variant: 'danger' })
                 }
                 e.target.value = ''
               }}

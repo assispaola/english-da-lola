@@ -266,7 +266,7 @@ export default function Roadmap() {
             {/* Group header */}
             {group.name && (
               <div className={`flex items-center gap-3 ${gi === 0 ? 'mb-3' : 'mt-6 mb-3'}`}>
-                <span className="font-heading text-xs font-bold uppercase tracking-widest flex-shrink-0 lowercase"
+                <span className="font-heading text-xs font-bold uppercase tracking-widest flex-shrink-0"
                   style={{ color: pc.primary, fontWeight: 700, letterSpacing: '0.08em' }}>
                   {group.name}
                 </span>

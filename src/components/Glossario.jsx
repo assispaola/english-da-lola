@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Search } from 'lucide-react'
 import { getGlossarioWordsByLevel, addGlossarioWord, updateGlossarioWord, deleteGlossarioWord } from '../utils/glossario'
+import { confirmDialog } from '../utils/confirmDialog'
 import { useLevel } from '../utils/levels'
 import { getCardColorSet } from '../utils/colors'
 
@@ -48,8 +49,8 @@ export default function Glossario() {
     setEditId(word.id); setShowForm(true)
   }
 
-  const deleteWord = (id) => {
-    if (window.confirm('Excluir esta palavra?')) { deleteGlossarioWord(id); refresh() }
+  const deleteWord = async (id) => {
+    if (await confirmDialog('Excluir esta palavra?')) { deleteGlossarioWord(id); refresh() }
   }
 
   const filtered = words.filter(w => {

@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { Plus, X, Pencil, Trash2 } from 'lucide-react'
 import { getDiarioEntries, addDiarioEntry, updateDiarioEntry, deleteDiarioEntry } from '../utils/diario'
+import { confirmDialog } from '../utils/confirmDialog'
 import { useLevel } from '../utils/levels'
 import { useAutoSave } from '../hooks/useAutoSave'
 import SaveStatus from './SaveStatus'
@@ -133,8 +134,8 @@ export default function DiarioBordo() {
     setMode('list'); recordActivity()
   }
 
-  const deleteEntry = (id) => {
-    if (!window.confirm('Excluir esta entrada?')) return
+  const deleteEntry = async (id) => {
+    if (!(await confirmDialog('Excluir esta entrada?'))) return
     deleteDiarioEntry(id)
     refresh()
     if (viewId === id) setMode('list')
