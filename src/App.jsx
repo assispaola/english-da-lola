@@ -119,6 +119,13 @@ function AppShell() {
     return cleanup
   }, [])
 
+  // Browser tab title tracks the active CEFR level (kept in sync with
+  // whatever LevelSelector switches to), instead of a level hardcoded in
+  // index.html's static <title>.
+  useEffect(() => {
+    document.title = `English Journey ♥ — ${currentLevel}`
+  }, [currentLevel])
+
   // Show random pending (non-archived) error toast on load
   useEffect(() => {
     try {
@@ -204,7 +211,9 @@ function AppShell() {
 
           <div className="md:ml-0 ml-10">
             <h1>{PAGE_TITLES[activePage]}</h1>
-            <p>{activePage === 'roadmap' ? `acompanhe sua jornada ${currentLevel.toLowerCase()}` : PAGE_SUBTITLES[activePage]}</p>
+            <p>{activePage === 'roadmap'
+              ? <>acompanhe sua jornada <span style={{ textTransform: 'uppercase' }}>{currentLevel}</span></>
+              : PAGE_SUBTITLES[activePage]}</p>
           </div>
 
           <WavyBackground

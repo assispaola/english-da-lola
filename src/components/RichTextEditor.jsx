@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -29,6 +29,7 @@ function ToolbarButton({ onClick, active, title, children }) {
         background: active ? 'rgba(233,30,140,0.12)' : 'transparent',
         color: active ? '#E91E8C' : '#6B7280',
         border: 'none', cursor: 'pointer', flexShrink: 0,
+        fontSize: '15px', fontWeight: 700, lineHeight: 1,
       }}>
       {children}
     </button>
@@ -39,22 +40,28 @@ function Divider() {
   return <div style={{ width: '1px', height: '20px', backgroundColor: '#E5E7EB', margin: '0 2px', flexShrink: 0 }} />
 }
 
-// Small popover with a grid of options, anchored under its toolbar button.
-// Closes on outside click or when a value is picked.
-function Picker({ open, onClose, border, children }) {
-  const ref = useRef(null)
-
+// Closes a picker when a click lands outside its whole group (trigger
+// button + popover together, via groupRef) — NOT just outside the popover
+// itself. The click that opens the picker (mouseup after the trigger's own
+// mousedown) also bubbles to document as a 'click'; if only the popover
+// were checked, that click would immediately count as "outside" (the
+// trigger button isn't inside the popover) and close it right away.
+function useOutsideClose(groupRef, open, onClose) {
   useEffect(() => {
     if (!open) return
-    const onDocMouseDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
-  }, [open, onClose])
+    const onDocClick = (e) => { if (groupRef.current && !groupRef.current.contains(e.target)) onClose() }
+    document.addEventListener('click', onDocClick)
+    return () => document.removeEventListener('click', onDocClick)
+  }, [groupRef, open, onClose])
+}
 
+// Small popover with a grid of options, anchored under its toolbar button.
+function Picker({ open, border, children }) {
   if (!open) return null
 
   return (
-    <div ref={ref} className="absolute z-20 flex flex-wrap gap-1 p-2"
+    <div className="absolute z-20 flex flex-wrap gap-1 p-2"
+      onMouseDown={e => e.preventDefault()}
       style={{
         top: 'calc(100% + 4px)', left: 0, width: '168px',
         backgroundColor: 'white', border: `1.5px solid ${border}`, borderRadius: '10px',
@@ -80,6 +87,11 @@ export default function RichTextEditor({
   const border = borderColor || '#F9A8D4'
   const primary = primaryColor || '#E91E8C'
   const [openPicker, setOpenPicker] = useState(null) // null | 'icon' | 'emoji'
+  const closePicker = useCallback(() => setOpenPicker(null), [])
+  const iconGroupRef  = useRef(null)
+  const emojiGroupRef = useRef(null)
+  useOutsideClose(iconGroupRef,  openPicker === 'icon',  closePicker)
+  useOutsideClose(emojiGroupRef, openPicker === 'emoji', closePicker)
 
   const editor = useEditor({
     extensions: [
@@ -136,19 +148,19 @@ export default function RichTextEditor({
         {btn(() => editor.chain().focus().toggleBulletList().run(),  editor.isActive('bulletList'),  'Bullet list',   List)}
         {btn(() => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'), 'Ordered list',  ListOrdered)}
         <Divider />
-        {btn(() => editor.chain().focus().setHorizontalRule().run(), false, 'Horizontal rule', Minus)}
-        {btn(() => insertText('—'), false, 'Inserir travessão (—)', Minus)}
+        {btn(() => editor.chain().focus().setHorizontalRule().run(), false, 'Linha horizontal', Minus)}
+        <ToolbarButton onClick={() => insertText('—')} active={false} title="Inserir travessão (—)">—</ToolbarButton>
         <Divider />
 
         {/* Icon picker */}
-        <div className="relative">
+        <div className="relative" ref={iconGroupRef}>
           <ToolbarButton onClick={() => setOpenPicker(p => p === 'icon' ? null : 'icon')} active={openPicker === 'icon'} title="Inserir ícone">
             <Shapes size={14} />
           </ToolbarButton>
-          <Picker open={openPicker === 'icon'} onClose={() => setOpenPicker(null)} border={border}>
+          <Picker open={openPicker === 'icon'} border={border}>
             {ICON_OPTIONS.map(({ glyph, label, Icon }) => (
               <button key={label} type="button" title={label}
-                onMouseDown={e => { e.preventDefault(); insertText(glyph) }}
+                onClick={() => insertText(glyph)}
                 className="flex items-center justify-center transition-all hover:scale-105"
                 style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer', color: primary, backgroundColor: accent }}>
                 <Icon size={16} />
@@ -158,14 +170,14 @@ export default function RichTextEditor({
         </div>
 
         {/* Emoji picker */}
-        <div className="relative">
+        <div className="relative" ref={emojiGroupRef}>
           <ToolbarButton onClick={() => setOpenPicker(p => p === 'emoji' ? null : 'emoji')} active={openPicker === 'emoji'} title="Inserir emoji">
             <Smile size={14} />
           </ToolbarButton>
-          <Picker open={openPicker === 'emoji'} onClose={() => setOpenPicker(null)} border={border}>
+          <Picker open={openPicker === 'emoji'} border={border}>
             {EMOJI_OPTIONS.map(emoji => (
               <button key={emoji} type="button" title={emoji}
-                onMouseDown={e => { e.preventDefault(); insertText(emoji) }}
+                onClick={() => insertText(emoji)}
                 className="flex items-center justify-center transition-all hover:scale-110"
                 style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '16px', backgroundColor: accent }}>
                 {emoji}

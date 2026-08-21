@@ -207,7 +207,7 @@ export default function Dashboard({ setActivePage }) {
       <div className="card p-5 md:p-6">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-heading text-lg md:text-xl lowercase" style={{ color: pc.secondary, fontWeight: 500 }}>
-            overall progress — {currentLevel.toLowerCase()}
+            overall progress — <span style={{ textTransform: 'uppercase' }}>{currentLevel}</span>
           </h3>
           <span className="font-heading text-2xl" style={{ color: pc.primary }}>{roadmapProgress}%</span>
         </div>
