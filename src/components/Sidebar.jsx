@@ -41,7 +41,7 @@ export default function Sidebar({ activePage, setActivePage }) {
       <div className="px-5 py-6" style={{ borderBottom: '1.5px solid #F3F4F6' }}>
         <p className="font-heading text-2xl leading-tight lowercase"
           style={{ fontWeight: 900, color: activeColor, transition: 'color 0.3s' }}>
-          english journey
+          english journey ♥
         </p>
         <div className="mt-3">
           <LevelSelector compact activeColor={activeColor} />
@@ -99,7 +99,7 @@ export default function Sidebar({ activePage, setActivePage }) {
           </button>
         )}
         <p className="text-xs text-center font-body italic" style={{ color: activeColor, opacity: 0.7, transition: 'color 0.3s' }}>
-          great minds english ♥
+          criado por paola assis ♥
         </p>
       </div>
     </aside>

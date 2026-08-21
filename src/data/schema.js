@@ -170,6 +170,47 @@ export function createDiarioEntry({
   }
 }
 
+export const SPEAKING_RATINGS = ['facil', 'medio', 'dificil']
+
+// Self-reported check-in for a "Fala" (speaking) roadmap topic — recorded
+// right before the topic is allowed to be marked Concluído, since there's
+// no automatic pronunciation check (no SpeechRecognition yet). Kept as its
+// own history (not just a field on the roadmap item) so practicing the same
+// topic again later adds another entry instead of overwriting the last one.
+export function createSpeakingAssessment({
+  topicId,
+  rating,
+  note = '',
+  level = DEFAULT_LEVEL,
+} = {}) {
+  return {
+    id: genId(),
+    topicId,
+    rating,
+    note,
+    level,
+    timestamp: nowISO(),
+  }
+}
+
+export const CLASS_TYPES = ['Grupo', 'VIP']
+
+// Aulas agendadas (grupo ou VIP). Cross-level: estudar/ter aula não depende
+// do nível CEFR ativo, por isso não carrega `level`.
+export function createClassEntry({
+  date,
+  topic = '',
+  type = CLASS_TYPES[1],
+} = {}) {
+  return {
+    id: genId(),
+    date,
+    topic,
+    type,
+    createdAt: nowISO(),
+  }
+}
+
 export function createGlossarioWord({
   word,
   pronunciation = '',

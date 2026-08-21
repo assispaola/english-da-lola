@@ -3,8 +3,9 @@ import { LEVELS } from './levels'
 const DATA_KEYS = [
   'ej_flashcards', 'ej_roadmap', 'ej_glossario', 'ej_diario',
   'ej_metas', 'ej_erros', 'ej_frases', 'ej_vip_sessions',
-  'ej_vip_current', 'ej_next_class', 'ej_activity',
+  'ej_vip_current', 'ej_next_class', 'ej_classes', 'ej_activity',
   'ej_topics', 'ej_exercises', 'ej_attempts', 'ej_error_log', 'ej_notes',
+  'ej_speaking_assessments',
   'ej_current_level', 'ej_levels_unlocked',
   ...LEVELS.map(level => `ej_roadmap__${level}`), // per-level roadmap progress
 ]

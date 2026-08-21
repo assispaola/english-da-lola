@@ -76,7 +76,7 @@ export default function Login({ initialNotice = '' }) {
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #E91E8C 0%, #FF9F1C 100%)', opacity: 0.06 }} />
       <div className="card p-8 max-w-sm w-full mx-4 text-center relative" style={{ borderColor: '#F8BBD0' }}>
         <p className="font-heading text-3xl leading-tight lowercase mb-1" style={{ fontWeight: 900, color: '#E91E8C' }}>
-          english journey
+          english journey ♥
         </p>
         <p className="font-body text-sm mb-6" style={{ color: '#9CA3AF' }}>
           {mode === 'forgot' ? 'digite seu e-mail para redefinir a senha' : 'entre para sincronizar seu progresso em qualquer dispositivo'}

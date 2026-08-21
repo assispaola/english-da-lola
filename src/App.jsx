@@ -251,7 +251,7 @@ function AppShell() {
 function SplashScreen({ message }) {
   return (
     <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ backgroundColor: '#F8F9FA' }}>
-      <p className="font-heading text-2xl lowercase" style={{ fontWeight: 900, color: '#E91E8C' }}>english journey</p>
+      <p className="font-heading text-2xl lowercase" style={{ fontWeight: 900, color: '#E91E8C' }}>english journey ♥</p>
       {message && <p className="font-body text-sm" style={{ color: '#9CA3AF' }}>{message}</p>}
     </div>
   )

@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRef } from 'react'
-import { Flame, Layers, CheckCircle, Download, Upload, Zap, Lightbulb, ChevronRight } from 'lucide-react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { Flame, Layers, CheckCircle, Download, Upload, Zap, Lightbulb, ChevronRight, Info } from 'lucide-react'
 import { getExerciseStreak, getTotalXP, getLevelInfo } from '../utils/gamification'
 import { getVipSuggestions } from '../utils/reviewQueue'
 import { getRoadmapForLevel } from '../data/roadmapData'
 import { useLevel, DEFAULT_LEVEL } from '../utils/levels'
 import { exportBackup, importBackup } from '../utils/backup'
+import { getUpcomingClasses } from '../utils/classes'
 import { PAGE_COLORS } from '../utils/colors'
 import ExportReport from './ExportReport'
 import WavyBackground from './WavyBackground'
 import LevelSelector from './LevelSelector'
+import ClassesCard from './ClassesCard'
 
 const SKILL_CATEGORIES = ['Gramática', 'Vocabulário', 'Leitura', 'Fala']
 const SKILL_COLORS = {
@@ -94,7 +95,6 @@ function SkillLineChart({ weeks, series }) {
 export default function Dashboard({ setActivePage }) {
   const { currentLevel } = useLevel()
   const fileInputRef = useRef(null)
-  const [nextClass, setNextClass] = useLocalStorage('ej_next_class', { date: '', topic: '', type: 'VIP' }, 'nextClass')
   const [streak,          setStreak]         = useState(0)
   const [xpTotal,         setXpTotal]        = useState(0)
   const [levelInfo,       setLevelInfo]      = useState({ level: 1, xpIntoLevel: 0, xpForNext: 100, pct: 0 })
@@ -137,8 +137,8 @@ export default function Dashboard({ setActivePage }) {
     setReviewsToday(fc.filter(f => (f.level || DEFAULT_LEVEL) === currentLevel && f.lastReview === today).length)
   }, [today, currentLevel])
 
-  const daysUntil = nextClass.date
-    ? Math.ceil((new Date(nextClass.date + 'T12:00:00') - new Date()) / 86400000) : null
+  const [classesTick, setClassesTick] = useState(0)
+  const nextVipClass = useMemo(() => getUpcomingClasses(today).find(c => c.type === 'VIP'), [today, classesTick])
 
   const quickLinks = [
     { id: 'flashcards', label: 'Revisar Cards',  pc: PAGE_COLORS.flashcards },
@@ -264,6 +264,10 @@ export default function Dashboard({ setActivePage }) {
               <span className="font-body text-xs" style={{ color: '#6B7280' }}>
                 {s.category} <strong style={{ color: s.color }}>{s.current}%</strong>
               </span>
+              {s.category === 'Fala' && (
+                <Info size={12} style={{ color: '#9CA3AF', cursor: 'help' }}
+                  title="Autoavaliado por você após a prática — sem verificação automática de pronúncia" />
+              )}
             </div>
           ))}
         </div>
@@ -276,8 +280,8 @@ export default function Dashboard({ setActivePage }) {
           <h3 className="font-heading text-lg lowercase" style={{ color: pc.secondary, fontWeight: 500 }}>próxima aula vip</h3>
         </div>
         <p className="font-body text-sm mb-3" style={{ color: '#9CA3AF' }}>
-          {nextClass.date && nextClass.type === 'VIP'
-            ? `${new Date(nextClass.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}${nextClass.topic ? ` · ${nextClass.topic}` : ''}`
+          {nextVipClass
+            ? `${new Date(nextVipClass.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}${nextVipClass.topic ? ` · ${nextVipClass.topic}` : ''}`
             : 'agende sua próxima aula VIP no card abaixo'}
         </p>
         {vipSuggestions.length > 0 ? (
@@ -299,43 +303,8 @@ export default function Dashboard({ setActivePage }) {
         )}
       </div>
 
-      {/* Next class */}
-      <div className="card p-5 md:p-6">
-        <h3 className="font-heading text-xl mb-4 lowercase" style={{ color: pc.secondary, fontWeight: 500 }}>
-          next class 📅
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          {[
-            { label: 'data',   children: <input type="date" value={nextClass.date} onChange={e => setNextClass({ ...nextClass, date: e.target.value })} className="input-field" /> },
-            { label: 'tópico', children: <input type="text" value={nextClass.topic} onChange={e => setNextClass({ ...nextClass, topic: e.target.value })} placeholder="ex: Present Continuous…" className="input-field" /> },
-            { label: 'tipo',   children: (
-              <select value={nextClass.type} onChange={e => setNextClass({ ...nextClass, type: e.target.value })} className="input-field">
-                <option value="VIP">VIP</option><option value="Grupo">Grupo</option>
-              </select>
-            )},
-          ].map(({ label, children }) => (
-            <div key={label}>
-              <label className="block text-xs font-body mb-1" style={{ color: '#9CA3AF' }}>{label}</label>
-              {children}
-            </div>
-          ))}
-        </div>
-        {nextClass.date && (
-          <div className="rounded-xl p-3 font-body text-sm" style={{ backgroundColor: pc.accent, border: `1.5px solid ${pc.border}` }}>
-            <strong style={{ color: pc.primary }}>{nextClass.type}</strong>
-            {' — '}{nextClass.topic || 'sem tópico'}
-            {daysUntil !== null && (
-              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: pc.border, color: pc.text }}>
-                {daysUntil <= 0 ? 'hoje!' : daysUntil === 1 ? 'amanhã!' : `em ${daysUntil} dias`}
-              </span>
-            )}
-            <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
-              {new Date(nextClass.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Classes CRUD */}
+      <ClassesCard onChange={() => setClassesTick(t => t + 1)} />
 
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

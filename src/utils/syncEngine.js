@@ -20,6 +20,8 @@ export const SYNCED_COLLECTIONS = {
   notes: 'ej_notes',
   errorLog: 'ej_error_log',
   attempts: 'ej_attempts',
+  classes: 'ej_classes',
+  speakingAssessments: 'ej_speaking_assessments',
 }
 
 const SETTINGS_KEYS = {

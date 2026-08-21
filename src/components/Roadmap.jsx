@@ -11,6 +11,8 @@ import NoteFields from './NoteFields'
 import { getNotesByTopic, addNote, updateNote as updateNoteEntity } from '../utils/notes'
 import { isTopicPracticed } from '../utils/exercises'
 import { pushRoadmap } from '../utils/syncEngine'
+import { addSpeakingAssessment, getAssessmentsByTopic, ratingEmoji } from '../utils/speakingAssessments'
+import SpeakingAssessmentModal from './SpeakingAssessmentModal'
 
 const TABS = ['Gramática', 'Vocabulário', 'Leitura', 'Fala']
 
@@ -29,8 +31,9 @@ const STATUS_STYLES = {
   'Revisar':      { bg: '#FEF3C7', color: '#D97706', border: '#FDE68A' },
 }
 
-function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, pc, practiced, level }) {
+function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, pc, practiced, level, isSpeaking }) {
   const [note, setNote] = useState(() => getNotesByTopic(item.id, level)[0] || null)
+  const speakingHistory = isSpeaking ? getAssessmentsByTopic(item.id, level) : []
   // Mirrors `note` synchronously so `persist` can decide create-vs-update
   // without putting side effects (addNote/updateNote hit localStorage)
   // inside a setState updater — React StrictMode double-invokes those on
@@ -78,6 +81,11 @@ function RoadmapItem({ item, st, expanded, onCycle, onToggleNote, pc, practiced,
           <StickyNote size={16} />
         </button>
       </div>
+      {isSpeaking && speakingHistory.length > 0 && (
+        <p className="font-body text-xs mt-1.5 pl-1" style={{ color: '#9CA3AF' }} title={speakingHistory.map(a => a.note).filter(Boolean).join(' · ')}>
+          🗣️ praticado {speakingHistory.length}x: {speakingHistory.map(a => ratingEmoji(a.rating)).join(' ')}
+        </p>
+      )}
       {expanded && (
         <div className="mt-3 pl-2 border-l-2" style={{ borderColor: pc.border }}>
           <div className="flex justify-end mb-1"><SaveStatus status={saveStatus} /></div>
@@ -125,11 +133,13 @@ export default function Roadmap() {
 
   const [activeTab,     setActiveTab]     = useState('Gramática')
   const [expandedNotes, setExpandedNotes] = useState({})
+  // Set while a "Fala" topic is about to be marked Concluído and is waiting
+  // on the self-assessment modal — the status change itself only happens
+  // once that's answered (see confirmSpeakingAssessment below).
+  const [pendingAssessment, setPendingAssessment] = useState(null)
 
-  const cycleStatus = (tab, itemId) => {
+  const applyStatusChange = (tab, itemId, next) => {
     const items = roadmap[tab]
-    const item  = items.find(i => i.id === itemId)
-    const next  = STATUS_CYCLE[(STATUS_CYCLE.indexOf(item.status) + 1) % STATUS_CYCLE.length]
     const updatedRoadmap = {
       ...roadmap,
       [tab]: items.map(i => i.id === itemId ? {
@@ -141,6 +151,30 @@ export default function Roadmap() {
     pushRoadmap(currentLevel, updatedRoadmap)
     recordActivity()
     checkUnlocks() // marking something Concluído might complete this level's roadmap
+  }
+
+  const cycleStatus = (tab, itemId) => {
+    const items = roadmap[tab]
+    const item  = items.find(i => i.id === itemId)
+    const next  = STATUS_CYCLE[(STATUS_CYCLE.indexOf(item.status) + 1) % STATUS_CYCLE.length]
+
+    // Speaking topics need an honest self-check before they can be marked
+    // done — there's no automatic pronunciation verification (no
+    // SpeechRecognition yet), so "Concluído" would otherwise mean nothing
+    // more than a click, same as any other category.
+    if (tab === 'Fala' && next === 'Concluído') {
+      setPendingAssessment({ tab, itemId, next, itemTitle: item.title })
+      return
+    }
+    applyStatusChange(tab, itemId, next)
+  }
+
+  const confirmSpeakingAssessment = ({ rating, note }) => {
+    if (!pendingAssessment) return
+    const { tab, itemId, next } = pendingAssessment
+    addSpeakingAssessment({ topicId: itemId, rating, note, level: currentLevel })
+    applyStatusChange(tab, itemId, next)
+    setPendingAssessment(null)
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,6 +294,7 @@ export default function Roadmap() {
                     pc={pc}
                     practiced={isTopicPracticed(item.id, currentLevel)}
                     level={currentLevel}
+                    isSpeaking={activeTab === 'Fala'}
                   />
                 )
               })}
@@ -285,6 +320,14 @@ export default function Roadmap() {
         </div>
         <p className="text-xs font-body text-center mt-3" style={{ color: '#9CA3AF' }}>tópicos concluídos por mês</p>
       </div>
+
+      {pendingAssessment && (
+        <SpeakingAssessmentModal
+          topicTitle={pendingAssessment.itemTitle}
+          onCancel={() => setPendingAssessment(null)}
+          onSubmit={confirmSpeakingAssessment}
+        />
+      )}
     </div>
   )
 }
